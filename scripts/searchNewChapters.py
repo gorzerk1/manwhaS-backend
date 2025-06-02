@@ -116,17 +116,27 @@ if __name__ == "__main__":
             local_chapter = get_local_latest_chapter(folder_path)
             entries = manhwa_list[folder]
 
+            preferred_logged = False
+            preferred_online = None
+
             for data in entries:
                 site = data.get("site", "unknown")
                 online_chapter = check_online_chapter(folder, data)
 
                 if online_chapter is not None and (not local_chapter or online_chapter > local_chapter):
-                    print(f"🆕 {site} - {folder}: New Chapter {online_chapter}")
-                    log_new_chapter(folder, site, local_chapter, online_chapter)
-                    new_found = True
+                    tag = "(prefered)" if not preferred_logged else "(skipped)"
+                    print(f"🆕 {site} - {folder}: New Chapter {online_chapter} {tag}")
+                    if not preferred_logged:
+                        log_new_chapter(folder, site, local_chapter, online_chapter)
+                        new_found = True
+                        preferred_logged = True
+                        preferred_online = online_chapter
                 else:
-                    online_str = "❌ error" if online_chapter is None else online_chapter
-                    print(f"✅ {site} - {folder}: No new chapter (Local: {local_chapter}, Online: {online_str})")
+                    if preferred_logged and online_chapter == preferred_online:
+                        print(f"🆕 {site} - {folder}: New Chapter {online_chapter} (skipped)")
+                    else:
+                        online_str = "❌ error" if online_chapter is None else online_chapter
+                        print(f"✅ {site} - {folder}: No new chapter (Local: {local_chapter}, Online: {online_str})")
 
     if not new_found:
         log_no_new_chapters()
