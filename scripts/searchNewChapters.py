@@ -110,9 +110,15 @@ def log_no_new_chapters():
 # === MAIN ===
 if __name__ == "__main__":
     new_found = False
+    printed_header = False
+
     for folder in sorted(os.listdir(pictures_path)):
         folder_path = os.path.join(pictures_path, folder)
         if os.path.isdir(folder_path) and folder in manhwa_list:
+            if not printed_header:
+                print("_" * 86)
+                printed_header = True
+
             local_chapter = get_local_latest_chapter(folder_path)
             entries = manhwa_list[folder]
 
@@ -139,8 +145,6 @@ if __name__ == "__main__":
                         print(f"✅ {site} - {folder}: No new chapter (Local: {local_chapter}, Online: {online_str})")
 
             print("_" * 86)
-
-
 
     if not new_found:
         log_no_new_chapters()
