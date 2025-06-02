@@ -13,7 +13,6 @@ with open("/home/ubuntu/server-backend/json/manhwa_list.json", "r") as f:
 # === PATHS ===
 pictures_path = os.path.expanduser("~/backend/pictures")
 log_dir = os.path.expanduser("~/backend/logs/searchNewChapters")
-headers = {"User-Agent": "Mozilla/5.0"}
 
 # === GET LATEST LOCAL CHAPTER ===
 def get_local_latest_chapter(folder_path):
@@ -24,23 +23,31 @@ def get_local_latest_chapter(folder_path):
             chapter_nums.append(int(match.group(1)))
     return max(chapter_nums) if chapter_nums else None
 
-# === SPECIAL ASURA HANDLER ===
-def find_asura_series_url(slug):
-    res = requests.get("https://asuracomic.net/", headers=headers, timeout=15)
-    soup = BeautifulSoup(res.text, "html.parser")
-    anchors = soup.select("div.grid.grid-rows-1.grid-cols-1.sm\\:grid-cols-2.bg-\\[\\#222222\\].p-3.pb-0 a[href^='/series/']")
-    for a in anchors:
-        href = a.get("href", "")
-        if f"/series/{slug}" in href or href.startswith(f"/series/{slug}-"):
-            return "https://asuracomic.net" + href
-    raise Exception("Asura canonical link not found")
+# === FETCH ASURA SERIES URL ===
+def fetch_asura_series_url(name):
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        res = requests.get("https://asuracomic.net/", headers=headers, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        containers = soup.find_all("div", class_="w-[100%] h-32 relative")
+        for container in containers:
+            a_tag = container.find("a", href=True)
+            if a_tag and name.replace("-", " ").lower() in a_tag.get("title", "").lower():
+                return a_tag["href"]
+    except Exception as e:
+        print(f"❌ Error fetching Asura series URL for {name}: {e}")
+    return None
 
 # === CHECK ONLINE CHAPTER ===
 def check_online_chapter(name, data):
     site = data.get("site")
+    headers = {"User-Agent": "Mozilla/5.0"}
+
     try:
         if site == "asura":
-            series_url = find_asura_series_url(name)
+            series_url = fetch_asura_series_url(name)
+            if not series_url:
+                raise Exception("Asura series URL not found")
             res = requests.get(series_url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("a[href*='/chapter/']")
