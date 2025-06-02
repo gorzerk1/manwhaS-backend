@@ -11,15 +11,33 @@ from time import sleep, time
 from datetime import datetime
 import shutil
 
-# Kill zombie Chrome processes before starting
+# Kill zombie Chrome processes
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
 os.system("pkill -f chromium")
 os.system("pkill -f HeadlessChrome")
 os.system("pkill -f selenium")
 
-# === Load only 'asura' entries from JSON ===
+# === CONFIG ===
 json_path = os.path.expanduser("~/server-backend/json/manhwa_list.json")
+base_dir = os.path.expanduser("~/backend")
+pictures_base = os.path.join(base_dir, "pictures")
+log_base = os.path.join(base_dir, "logs")
+check_url = "https://asuracomic.net"
+
+# === FIND ID ===
+def fetch_asura_id(slug):
+    try:
+        url = f"https://asuracomic.net/?s={slug.replace('-', '+')}"
+        res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        for link in soup.select("a[href*='/series/']"):
+            href = link.get("href", "")
+            if f"/series/{slug}-" in href:
+                return href.split(f"/series/{slug}-")[1].split("/")[0]
+    except: return None
+
+# === LOAD LIST ===
 with open(json_path, "r") as f:
     full_data = json.load(f)
 
@@ -27,13 +45,11 @@ manhwa_list = []
 for name, sources in full_data.items():
     for entry in sources:
         if entry.get("site") == "asura":
-            manhwa_list.append(name)
+            series_id = entry.get("id") or fetch_asura_id(name)
+            if series_id:
+                manhwa_list.append({"name": name, "id": series_id})
 
-base_dir = os.path.expanduser("~/backend")
-pictures_base = os.path.join(base_dir, "pictures")
-log_base = os.path.join(base_dir, "logs")
-check_url = "https://asuracomic.net"
-
+# === SETUP ===
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
 log_folder = os.path.join(log_base, timestamp)
 os.makedirs(log_folder, exist_ok=True)
@@ -60,118 +76,112 @@ def wait_for_connection():
             print("❌ Can't connect. Retrying in 5 min...")
         sleep(300)
 
-def get_latest_chapter(name):
+def get_latest_chapter(slug_id):
     try:
-        url = f"https://asuracomic.net/manga/{name}/"
+        url = f"https://asuracomic.net/series/{slug_id}"
         res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        chapter_links = soup.select("a[href*='/chapter/']")
-        chapter_numbers = []
-        for link in chapter_links:
+        links = soup.select("a[href*='/chapter/']")
+        nums = []
+        for link in links:
             href = link.get("href", "")
             try:
-                num = int(href.split("/chapter/")[1].split("/")[0])
-                chapter_numbers.append(num)
-            except:
-                continue
-        return max(chapter_numbers) if chapter_numbers else 1
+                nums.append(int(href.split("/chapter/")[1].split("/")[0]))
+            except: continue
+        return max(nums) if nums else 1
     except Exception as e:
-        print(f"❌ Failed to get latest chapter: {e}")
+        print(f"❌ get_latest_chapter error: {e}")
         return 1
 
+# === MAIN ===
 start_time = time()
 wait_for_connection()
 all_errors = []
 
-for name in manhwa_list:
-    series_url = f"https://asuracomic.net/manga/{name}/chapter/{{}}"
-    manhwa_dir = os.path.join(pictures_base, name)
-    log_file_path = os.path.join(log_folder, f"{name}.txt")
+for manhwa in manhwa_list:
+    name = manhwa["name"]
+    id_ = manhwa["id"]
+    slug_id = f"{name}-{id_}"
+    url_format = f"https://asuracomic.net/series/{slug_id}/chapter/{{}}"
+    folder_path = os.path.join(pictures_base, name)
+    log_path = os.path.join(log_folder, f"{name}.txt")
     log_lines = []
 
     print(f"\n📚 Processing manhwa: {name}")
-    os.makedirs(manhwa_dir, exist_ok=True)
-    chapter_end = get_latest_chapter(name)
+    os.makedirs(folder_path, exist_ok=True)
+    last_chapter = get_latest_chapter(slug_id)
 
-    for chapter in range(1, chapter_end + 1):
-        chapter_dir = os.path.join(manhwa_dir, f"chapter-{chapter}")
-        chapter_url = series_url.format(chapter)
+    for chap in range(1, last_chapter + 1):
+        chap_folder = os.path.join(folder_path, f"chapter-{chap}")
+        chap_url = url_format.format(chap)
 
-        if os.path.exists(chapter_dir):
-            source_file = os.path.join(chapter_dir, "source.txt")
-            if os.path.exists(source_file):
-                with open(source_file, "r") as f:
-                    tag = f.read().strip()
-                if tag != "Downloaded from AsuraScans":
-                    print(f"🗑️ Chapter {chapter} not from Asura → Re-downloading...")
-                    shutil.rmtree(chapter_dir, ignore_errors=True)
-                else:
-                    log_lines.append(f"[Chapter {chapter}] Skipped (already from AsuraScans)")
-                    continue
+        if os.path.exists(chap_folder):
+            src_file = os.path.join(chap_folder, "source.txt")
+            if os.path.exists(src_file):
+                with open(src_file) as f:
+                    if f.read().strip() == "Downloaded from AsuraScans":
+                        log_lines.append(f"[Chapter {chap}] Skipped (already from AsuraScans)")
+                        continue
+                print(f"🗑️ Chapter {chap} not from Asura → Re-downloading...")
+                shutil.rmtree(chap_folder, ignore_errors=True)
             else:
-                log_lines.append(f"[Chapter {chapter}] Skipped (no source file, assuming Asura)")
+                log_lines.append(f"[Chapter {chap}] Skipped (no source file, assuming Asura)")
                 continue
 
-        print(f"📅 Downloading Chapter {chapter}...")
+        print(f"📅 Downloading Chapter {chap}...")
         success = False
         for attempt in range(1, 6):
             driver = None
             try:
                 driver = start_browser()
                 driver.set_page_load_timeout(60)
-                driver.get(chapter_url)
+                driver.get(chap_url)
 
-                try:
-                    WebDriverWait(driver, 5).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, "img.object-cover.mx-auto"))
-                    )
-                    img_elements = driver.find_elements(By.CSS_SELECTOR, "img.object-cover.mx-auto")
-                except:
-                    img_elements = []
+                WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "img.object-cover.mx-auto"))
+                )
+                images = driver.find_elements(By.CSS_SELECTOR, "img.object-cover.mx-auto")
 
-                if not img_elements:
+                if not images:
                     raise Exception("No images found")
 
-                os.makedirs(chapter_dir, exist_ok=True)
-                for i, img in enumerate(img_elements):
-                    img_url = img.get_attribute("src")
-                    ext = img_url.split(".")[-1].split("?")[0]
-                    img_name = f"{i+1:03d}.{ext}"
-                    img_path = os.path.join(chapter_dir, img_name)
-                    img_data = requests.get(img_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10).content
-                    with open(img_path, "wb") as f:
+                os.makedirs(chap_folder, exist_ok=True)
+                for i, img in enumerate(images):
+                    src = img.get_attribute("src")
+                    ext = src.split(".")[-1].split("?")[0]
+                    file_name = f"{i+1:03d}.{ext}"
+                    img_data = requests.get(src, headers={"User-Agent": "Mozilla/5.0"}, timeout=10).content
+                    with open(os.path.join(chap_folder, file_name), "wb") as f:
                         f.write(img_data)
                     sleep(0.3)
 
-                with open(os.path.join(chapter_dir, "source.txt"), "w") as f:
+                with open(os.path.join(chap_folder, "source.txt"), "w") as f:
                     f.write("Downloaded from AsuraScans")
 
-                print(f"✅ Saved chapter {chapter}")
-                log_lines.append(f"[Chapter {chapter}] ✅ Done")
+                print(f"✅ Saved chapter {chap}")
+                log_lines.append(f"[Chapter {chap}] ✅ Done")
                 success = True
                 break
 
             except Exception as e:
                 print(f"❌ Attempt {attempt}/5 failed: {e}")
                 sleep(3)
-
             finally:
                 if driver:
                     try: driver.quit()
                     except: pass
 
         if not success:
-            log_lines.append(f"[Chapter {chapter}] ❌ Failed")
-            all_errors.append(f"{name} Chapter {chapter}: failed after retries")
-            if os.path.exists(chapter_dir):
-                print(f"🧹 Removing failed chapter folder: {chapter_dir}")
-                shutil.rmtree(chapter_dir, ignore_errors=True)
+            log_lines.append(f"[Chapter {chap}] ❌ Failed")
+            all_errors.append(f"{name} Chapter {chap}: failed after retries")
+            if os.path.exists(chap_folder):
+                print(f"🧹 Removing failed chapter folder: {chap_folder}")
+                shutil.rmtree(chap_folder, ignore_errors=True)
 
-    with open(log_file_path, "w", encoding="utf-8") as log_file:
-        log_file.write(f"📚 Log for: {name}\n\n")
-        log_file.write("\n".join(log_lines))
+    with open(log_path, "w", encoding="utf-8") as logf:
+        logf.write(f"📚 Log for: {name}\n\n")
+        logf.write("\n".join(log_lines))
 
-    print(f"📝 Log saved for {name} → {log_file_path}")
+    print(f"📝 Log saved for {name} → {log_path}")
 
-end_time = time()
-print(f"\n⏱️ Finished in {end_time - start_time:.2f} sec")
+print(f"\n⏱️ Finished in {time() - start_time:.2f} sec")
