@@ -13,7 +13,6 @@ with open("/home/ubuntu/server-backend/json/manhwa_list.json", "r") as f:
 # === PATHS ===
 pictures_path = os.path.expanduser("~/backend/pictures")
 log_dir = os.path.expanduser("~/backend/logs/searchNewChapters")
-
 headers = {"User-Agent": "Mozilla/5.0"}
 
 # === GET LATEST LOCAL CHAPTER ===
@@ -25,28 +24,27 @@ def get_local_latest_chapter(folder_path):
             chapter_nums.append(int(match.group(1)))
     return max(chapter_nums) if chapter_nums else None
 
-# === FIND ASURA URL ===
+# === SPECIAL ASURA HANDLER ===
 def find_asura_series_url(slug):
     res = requests.get("https://asuracomic.net/", headers=headers, timeout=15)
     soup = BeautifulSoup(res.text, "html.parser")
     anchors = soup.select("div.grid.grid-rows-1.grid-cols-1.sm\\:grid-cols-2.bg-\\[\\#222222\\].p-3.pb-0 a[href^='/series/']")
     for a in anchors:
         href = a.get("href", "")
-        if f"/series/{slug}" in href:
+        if f"/series/{slug}" in href or href.startswith(f"/series/{slug}-"):
             return "https://asuracomic.net" + href
     raise Exception("Asura canonical link not found")
 
 # === CHECK ONLINE CHAPTER ===
 def check_online_chapter(name, data):
     site = data.get("site")
-
     try:
         if site == "asura":
             series_url = find_asura_series_url(name)
             res = requests.get(series_url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("a[href*='/chapter/']")
-            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter/(\d+)', link.get("href", "")))]
+            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter/(\d{1,4})', link.get("href", "")))]
             return max(chapter_nums) if chapter_nums else None
 
         elif site == "yaksha":
@@ -54,7 +52,7 @@ def check_online_chapter(name, data):
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
-            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d+)', link.get("href", "")))]
+            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d{1,4})', link.get("href", "")))]
             return max(chapter_nums) if chapter_nums else None
 
         elif site == "kunmanga":
@@ -62,7 +60,7 @@ def check_online_chapter(name, data):
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
-            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'chapter-(\d+)', link.get("href", "")))]
+            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'chapter-(\d{1,4})', link.get("href", "")))]
             return max(chapter_nums) if chapter_nums else None
 
         elif site == "manhwaclan":
@@ -81,7 +79,7 @@ def check_online_chapter(name, data):
             chapter_nums = []
             for item in items:
                 data_val = item.get("data", "")
-                match = re.search(r'chapter[^0-9]*?(\d+)', data_val, re.IGNORECASE)
+                match = re.search(r'chapter[^0-9]*?(\d{1,4})', data_val, re.IGNORECASE)
                 if match:
                     chapter_nums.append(int(match.group(1)))
             return max(chapter_nums) if chapter_nums else None
@@ -91,7 +89,7 @@ def check_online_chapter(name, data):
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("a[href*='/chapter/kingdom-chapter-']")
-            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'kingdom-chapter-(\d+)', link.get("href", "")))]
+            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'kingdom-chapter-(\d{1,4})', link.get("href", "")))]
             return max(chapter_nums) if chapter_nums else None
 
     except Exception as e:
