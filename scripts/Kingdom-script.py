@@ -47,19 +47,15 @@ total_downloaded_bytes = 0
 
 def try_download(chapter_url):
     try:
-        # quick check if URL exists
         res = session.head(chapter_url, headers=headers, timeout=5)
         if res.status_code != 200:
-            print(f"⚠️ Skipping (HTTP {res.status_code})")
             return []
-
         driver.set_page_load_timeout(15)
         driver.get(chapter_url)
         sleep(2)
         img_elements = driver.find_elements(By.CSS_SELECTOR, "div.text-center img")
         return [img.get_attribute("src") for img in img_elements if img.get_attribute("src")]
-    except Exception as e:
-        print(f"⚠️ Page error: {str(e).splitlines()[0]}")
+    except:
         return []
 
 def get_total_dir_size_gb(path):
@@ -71,16 +67,21 @@ def get_total_dir_size_gb(path):
                 total += os.path.getsize(fp)
             except:
                 continue
-    return round(total / 1024 / 1024 / 1024, 5)  # GB with 5 decimals
+    return round(total / 1024 / 1024 / 1024, 5)
 
+# Skip existing
+skipped = 0
+while os.path.exists(os.path.join(pictures_base, f"chapter-{chapter}")):
+    chapter += 1
+    skipped += 1
+
+if skipped > 0:
+    print(f"⏭️ Skipped {skipped} chapters already downloaded (up to chapter {chapter - 1})")
+
+# Start from first missing
 while True:
     chapter_dir = os.path.join(pictures_base, f"chapter-{chapter}")
     print(f"\n📚 Chapter {chapter}")
-
-    if os.path.exists(chapter_dir):
-        print("⏭️ Skipped (exists)")
-        chapter += 1
-        continue
 
     print("🌀 Trying padded URL...")
     padded_url = f"{base_url}/chapter/{chapter_slug}-{chapter:03d}/"
@@ -102,7 +103,6 @@ while True:
         ext = img_url.split('.')[-1].split('?')[0]
         name = f"{i+1:03d}.{ext}"
         path = os.path.join(chapter_dir, name)
-
         try:
             t0 = time()
             res = session.get(img_url, headers=headers, timeout=30)
@@ -121,13 +121,12 @@ while True:
     log_lines.append(f"[Chapter {chapter}] ✅ Done")
     chapter += 1
 
+# Save log
 log_path = os.path.join(log_folder, f"{manga_name}.txt")
 with open(log_path, "w", encoding="utf-8") as f:
     f.write("\n".join(log_lines))
 
 driver.quit()
-
-# Final cleanup again (just in case)
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
 os.system("pkill -f chromium")
