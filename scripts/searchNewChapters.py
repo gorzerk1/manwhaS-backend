@@ -113,4 +113,21 @@ if __name__ == "__main__":
     for folder in sorted(os.listdir(pictures_path)):
         folder_path = os.path.join(pictures_path, folder)
         if os.path.isdir(folder_path) and folder in manhwa_list:
-            local_chapter = g_
+            local_chapter = get_local_latest_chapter(folder_path)
+            entries = manhwa_list[folder]
+
+            for data in entries:
+                site = data.get("site", "unknown")
+                online_chapter = check_online_chapter(folder, data)
+
+                if online_chapter is not None and (not local_chapter or online_chapter > local_chapter):
+                    print(f"🆕 {site} - {folder}: New Chapter {online_chapter}")
+                    log_new_chapter(folder, site, local_chapter, online_chapter)
+                    new_found = True
+                    break
+                else:
+                    online_str = "❌ error" if online_chapter is None else online_chapter
+                    print(f"✅ {site} - {folder}: No new chapter (Local: {local_chapter}, Online: {online_str})")
+
+    if not new_found:
+        log_no_new_chapters()
