@@ -5,7 +5,7 @@ const path = require('path');
 const app = express();
 
 app.use(cors({
-  origin: ["https://manhwawut.online", "http://localhost:3000", ]
+  origin: ["http://15.160.208.113:3000", "http://localhost:3000", ]
 }));
 
 // Serve static files
