@@ -26,8 +26,8 @@ with open(json_path, "r") as f:
 manhwa_list = []
 for name, sources in full_data.items():
     for entry in sources:
-        if entry.get("site") == "asura" and "id" in entry:
-            manhwa_list.append({"name": name, "id": entry["id"]})
+        if entry.get("site") == "asura":
+            manhwa_list.append(name)
 
 base_dir = os.path.expanduser("~/backend")
 pictures_base = os.path.join(base_dir, "pictures")
@@ -60,9 +60,9 @@ def wait_for_connection():
             print("❌ Can't connect. Retrying in 5 min...")
         sleep(300)
 
-def get_latest_chapter(series_id):
+def get_latest_chapter(name):
     try:
-        url = f"https://asuracomic.net/series/{series_id}"
+        url = f"https://asuracomic.net/manga/{name}/"
         res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
         chapter_links = soup.select("a[href*='/chapter/']")
@@ -83,17 +83,15 @@ start_time = time()
 wait_for_connection()
 all_errors = []
 
-for manhwa in manhwa_list:
-    name = manhwa["name"]
-    series_id = manhwa["id"]
-    series_url = f"https://asuracomic.net/series/{name}-{series_id}/chapter/{{}}"
+for name in manhwa_list:
+    series_url = f"https://asuracomic.net/manga/{name}/chapter/{{}}"
     manhwa_dir = os.path.join(pictures_base, name)
     log_file_path = os.path.join(log_folder, f"{name}.txt")
     log_lines = []
 
     print(f"\n📚 Processing manhwa: {name}")
     os.makedirs(manhwa_dir, exist_ok=True)
-    chapter_end = get_latest_chapter(f"{name}-{series_id}")
+    chapter_end = get_latest_chapter(name)
 
     for chapter in range(1, chapter_end + 1):
         chapter_dir = os.path.join(manhwa_dir, f"chapter-{chapter}")
@@ -165,7 +163,6 @@ for manhwa in manhwa_list:
         if not success:
             log_lines.append(f"[Chapter {chapter}] ❌ Failed")
             all_errors.append(f"{name} Chapter {chapter}: failed after retries")
-            # 🧹 Delete partial/broken folder
             if os.path.exists(chapter_dir):
                 print(f"🧹 Removing failed chapter folder: {chapter_dir}")
                 shutil.rmtree(chapter_dir, ignore_errors=True)
