@@ -165,6 +165,10 @@ for manhwa in manhwa_list:
         if not success:
             log_lines.append(f"[Chapter {chapter}] ❌ Failed")
             all_errors.append(f"{name} Chapter {chapter}: failed after retries")
+            # 🧹 Delete partial/broken folder
+            if os.path.exists(chapter_dir):
+                print(f"🧹 Removing failed chapter folder: {chapter_dir}")
+                shutil.rmtree(chapter_dir, ignore_errors=True)
 
     with open(log_file_path, "w", encoding="utf-8") as log_file:
         log_file.write(f"📚 Log for: {name}\n\n")
