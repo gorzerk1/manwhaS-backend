@@ -41,7 +41,6 @@ session = requests.Session()
 headers = {"User-Agent": "Mozilla/5.0"}
 
 start_time = time()
-chapter = 1
 log_lines = []
 total_downloaded_bytes = 0
 
@@ -62,24 +61,27 @@ def get_total_dir_size_gb(path):
     total = 0
     for dirpath, _, filenames in os.walk(path):
         for f in filenames:
-            fp = os.path.join(dirpath, f)
             try:
-                total += os.path.getsize(fp)
+                total += os.path.getsize(os.path.join(dirpath, f))
             except:
                 continue
     return round(total / 1024 / 1024 / 1024, 5)
 
-# Skip existing
-skipped = 0
-while os.path.exists(os.path.join(pictures_base, f"chapter-{chapter}")):
-    chapter += 1
-    skipped += 1
-
-if skipped > 0:
-    print(f"⏭️ Skipped {skipped} chapters already downloaded (up to chapter {chapter - 1})")
+# Scan already existing chapters
+existing = {
+    int(name.replace("chapter-", ""))
+    for name in os.listdir(pictures_base)
+    if name.startswith("chapter-") and os.path.isdir(os.path.join(pictures_base, name))
+}
+max_existing = max(existing) if existing else 0
+print(f"⏭️ Skipped {len(existing)} chapters already downloaded (up to chapter {max_existing})")
 
 # Start from first missing
+chapter = 1
 while True:
+    while chapter in existing:
+        chapter += 1
+
     chapter_dir = os.path.join(pictures_base, f"chapter-{chapter}")
     print(f"\n📚 Chapter {chapter}")
 
@@ -119,6 +121,7 @@ while True:
     print(f"💾 Total stored in EC2 (pictures folder): {current_total_gb:.5f} GB")
 
     log_lines.append(f"[Chapter {chapter}] ✅ Done")
+    existing.add(chapter)
     chapter += 1
 
 # Save log
