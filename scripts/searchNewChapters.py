@@ -124,7 +124,6 @@ if __name__ == "__main__":
                     print(f"🆕 {site} - {folder}: New Chapter {online_chapter}")
                     log_new_chapter(folder, site, local_chapter, online_chapter)
                     new_found = True
-                    break
                 else:
                     online_str = "❌ error" if online_chapter is None else online_chapter
                     print(f"✅ {site} - {folder}: No new chapter (Local: {local_chapter}, Online: {online_str})")
