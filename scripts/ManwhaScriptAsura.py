@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -17,20 +18,16 @@ os.system("pkill -f chromium")
 os.system("pkill -f HeadlessChrome")
 os.system("pkill -f selenium")
 
-manhwa_list = [
-    {"name": "absolute-regression", "id": "599cfbe8"},
-    {"name": "nano-machine", "id": "73fede7a"},
-    {"name": "myst-might-mayhem", "id": "dc1ffbc9"},
-    {"name": "the-return-of-the-crazy-demon", "id": "115496c8"},
-    {"name": "surviving-as-a-genius-on-borrowed-time", "id": "5a03908b"},
-    {"name": "swordmasters-youngest-son", "id": "c71b718b"},
-    {"name": "the-priest-of-corruption", "id": "6738c129"},
-    {"name": "reincarnation-of-the-suicidal-battle-god", "id": "726be5bc"},
-    {"name": "sword-fanatic-wanders-through-the-night", "id": "bb7402a6"},
-    {"name": "reaper-of-the-drifting-moon", "id": "4c110eed"},
-    {"name": "legend-of-asura-the-venom-dragon", "id": "c16a8bd0"},
-    {"name": "mookhyang-the-origin", "id": "6e4c0a98"},
-]
+# === Load only 'asura' entries from JSON ===
+json_path = os.path.expanduser("~/server-backend/json/manhwa_list.json")
+with open(json_path, "r") as f:
+    full_data = json.load(f)
+
+manhwa_list = []
+for name, sources in full_data.items():
+    for entry in sources:
+        if entry.get("site") == "asura" and "id" in entry:
+            manhwa_list.append({"name": name, "id": entry["id"]})
 
 base_dir = os.path.expanduser("~/backend")
 pictures_base = os.path.join(base_dir, "pictures")
