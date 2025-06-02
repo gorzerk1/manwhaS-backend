@@ -30,19 +30,13 @@ def check_online_chapter(name, data):
 
     try:
         if site == "asura":
-            series_page = f"https://asuracomic.net/manga/{name}/"
-            res = requests.get(series_page, headers=headers, timeout=10)
-            soup = BeautifulSoup(res.text, "html.parser")
-            canonical = soup.find("link", {"rel": "canonical"})
-            if not canonical or "/series/" not in canonical["href"]:
-                raise Exception("Asura canonical link not found")
-            series_id = canonical["href"].split("/series/")[1].split("/")[0]
-            url = f"https://asuracomic.net/series/{series_id}"
+            url = f"https://asuracomic.net/manga/{name}/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("a[href*='/chapter/']")
             chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter/(\d{1,4})', link.get("href", "")))]
             return max(chapter_nums) if chapter_nums else None
+
 
         elif site == "yaksha":
             url = f"https://yakshascans.com/manga/{name}"
