@@ -1,41 +1,14 @@
 import os
 import re
+import json
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone as dt_timezone
 from pytz import timezone
 
-# === MANHWA LIST ===
-manhwa_list = {
-    "absolute-regression": [
-        {"site": "asura", "id": "4441e82b"},
-        {"site": "kunmanga"}
-    ],
-    "nano-machine": [{"site": "asura", "id": "a60ad00b"}],
-    "myst-might-mayhem": [
-        {"site": "asura", "id": "1a2458b5"},
-        {"site": "yaksha"},
-        {"site": "manhwaclan"},
-        {"site": "kunmanga"}
-    ],
-    "the-return-of-the-crazy-demon": [
-        {"site": "asura", "id": "b00f9668"},
-        {"site": "yaksha"}
-    ],
-    "surviving-as-a-genius-on-borrowed-time": [
-        {"site": "asura", "id": "00e7e5a7"},
-        {"site": "manhwaclan"}
-    ],
-    "swordmasters-youngest-son": [{"site": "asura", "id": "049dcf42"}],
-    "the-priest-of-corruption": [{"site": "asura", "id": "12d4c6a8"}],
-    "reincarnation-of-the-suicidal-battle-god": [{"site": "asura", "id": "30451a6e"}],
-    "sword-fanatic-wanders-through-the-night": [{"site": "asura", "id": "c5b698cf"}],
-    "reaper-of-the-drifting-moon": [{"site": "asura", "id": "893b8d52"}],
-    "legend-of-asura-the-venom-dragon": [{"site": "asura", "id": "bc2f0e0d"}],
-    "mookhyang-the-origin": [{"site": "asura", "id": "6e4c0a98"}],
-    "demon-magic-emperor": [{"site": "manhuaplus"}],
-    "kingdom": [{"site": "readkingdom"}]
-}
+# === LOAD MANHWA LIST FROM JSON ===
+with open("/home/ubuntu/server-backend/json/manhwa_list.json", "r") as f:
+    manhwa_list = json.load(f)
 
 # === PATHS ===
 pictures_path = os.path.expanduser("~/backend/pictures")
@@ -109,7 +82,8 @@ def check_online_chapter(name, data):
             chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'kingdom-chapter-(\d{1,4})', link.get("href", "")))]
             return max(chapter_nums) if chapter_nums else None
 
-    except:
+    except Exception as e:
+        print(f"❌ Error for {name} ({site}): {e}")
         return None
 
     return None
@@ -139,21 +113,4 @@ if __name__ == "__main__":
     for folder in sorted(os.listdir(pictures_path)):
         folder_path = os.path.join(pictures_path, folder)
         if os.path.isdir(folder_path) and folder in manhwa_list:
-            local_chapter = get_local_latest_chapter(folder_path)
-            entries = manhwa_list[folder]
-
-            for data in entries:
-                site = data.get("site", "unknown")
-                online_chapter = check_online_chapter(folder, data)
-
-                if online_chapter is not None and (not local_chapter or online_chapter > local_chapter):
-                    print(f"🆕 {site} - {folder}: New Chapter {online_chapter}")
-                    log_new_chapter(folder, site, local_chapter, online_chapter)
-                    new_found = True
-                    break
-                else:
-                    online_str = "❌ error" if online_chapter is None else online_chapter
-                    print(f"✅ {site} - {folder}: No new chapter (Local: {local_chapter}, Online: {online_str})")
-
-    if not new_found:
-        log_no_new_chapters()
+            local_chapter = g_
