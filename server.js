@@ -9,7 +9,7 @@ app.locals.domain = "https://server.manhwawut.online"; // <-- change here as nee
 
 // === CORS Setup ===
 app.use(cors({
-  origin: ["https://server.manhwawut.online", "http://localhost:3000"]
+  origin: ["https://manhwawut.online", "http://localhost:3000"]
 }));
 
 // === Serve Static Files ===
