@@ -5,7 +5,7 @@ const path = require('path');
 const app = express();
 
 app.use(cors({
-  origin: ["https://manhwawut.online", "http://localhost:3000"]
+  origin: ["https://manhwawut.online", "http://localhost:3000", ]
 }));
 
 // Serve static files
@@ -22,6 +22,6 @@ app.use(require('./routes/chapterData'));
 app.use(require('./routes/description'));
 
 const PORT = 4000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Backend server running at http://localhost:${PORT}`);
 });
