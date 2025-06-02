@@ -138,7 +138,7 @@ if __name__ == "__main__":
                         online_str = "❌ error" if online_chapter is None else online_chapter
                         print(f"✅ {site} - {folder}: No new chapter (Local: {local_chapter}, Online: {online_str})")
 
-            print("------------------------------------------------------------")
+            print("--------------------------------------------------------------------------------------")
 
 
     if not new_found:
