@@ -4,23 +4,28 @@ const path = require('path');
 
 const app = express();
 
+// === Set your backend domain (IP or hostname) ===
+app.locals.domain = "http://15.160.208.113:4000"; // <-- change here as needed
+
+// === CORS Setup ===
 app.use(cors({
-  origin: ["http://15.160.208.113:3000", "http://localhost:3000", ]
+  origin: ["http://15.160.208.113:3000", "http://localhost:3000"]
 }));
 
-// Serve static files
+// === Serve Static Files ===
 app.use('/data/jsonFiles', express.static('/home/ubuntu/backend/data/jsonFiles'));
 app.use('/backend/manwhaTitle', express.static('/home/ubuntu/backend/manwhaTitle'));
 app.use('/backend/sideImage', express.static('/home/ubuntu/backend/sideImage'));
 app.use('/backend/updateChap', express.static('/home/ubuntu/backend/updateChap'));
 app.use('/backend/pictures', express.static('/home/ubuntu/backend/pictures'));
 
-// Routes
+// === Routes ===
 app.use(require('./routes/filteredManwhas'));
 app.use(require('./routes/latestUpdates'));
 app.use(require('./routes/chapterData'));
 app.use(require('./routes/description'));
 
+// === Start Server ===
 const PORT = 4000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Backend server running at http://localhost:${PORT}`);

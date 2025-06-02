@@ -11,6 +11,7 @@ router.get('/api/filtered-manwhas', async (req, res) => {
     const allChapters = [];
 
     const toTitleCase = str => str.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const domain = req.app.locals.domain || '';
 
     for (const folder of folders) {
       const descPath = path.join(jsonPath, folder, 'manwhaDescription.json');
@@ -49,7 +50,7 @@ router.get('/api/filtered-manwhas', async (req, res) => {
           time: item.time,
           timeAgo,
           timestamp: itemTime.getTime(),
-          image: updateImage ? `https://server.manhwawut.online/${updateImage}` : ''
+          image: updateImage ? `${domain}/${updateImage}` : ''
         });
       }
     }

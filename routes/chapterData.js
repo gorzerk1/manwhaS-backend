@@ -13,12 +13,14 @@ router.get('/api/chapter-data/:mangaName/:chapterNumber', async (req, res) => {
       return res.status(404).json({ error: 'Chapter folder not found' });
     }
 
+    const domain = req.app.locals.domain; // 👈 dynamic base URL
+
     const imageFiles = fs.readdirSync(chapterDir).filter(f =>
       f.toLowerCase().match(/\.(webp|jpg|jpeg|png)$/)
     );
 
     const imageUrls = imageFiles.map(file =>
-      `https://server.manhwawut.online/backend/pictures/${mangaName}/chapter-${chapterNumber}/${file}`
+      `${domain}/backend/pictures/${mangaName}/chapter-${chapterNumber}/${file}`
     );
 
     let chapters = [];

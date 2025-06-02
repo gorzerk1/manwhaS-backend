@@ -18,12 +18,15 @@ router.get('/api/description/:mangaName', async (req, res) => {
     const latestUpload = data.uploadTime?.[data.uploadTime.length - 1]?.time || "--";
     const updatedOn = latestUpload.split(' ')[1] || "--";
 
+    const domain = req.app.locals.domain || '';
+
     res.json({
       ...data,
-      imagelogo: `https://server.manhwawut.online/${data.imagelogo}`,
-      sideImage: `https://server.manhwawut.online/backend/sideImage/${mangaName}_sideimage.webp`,
+      imagelogo: `${domain}/${data.imagelogo}`,
+      sideImage: `${domain}/backend/sideImage/${mangaName}_sideimage.webp`,
       updatedOn
     });
+
   } catch (err) {
     console.error("❌ Error in /api/description:", err);
     res.status(500).json({ error: 'Server error' });
