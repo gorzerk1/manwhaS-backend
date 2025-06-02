@@ -5,7 +5,7 @@ from datetime import datetime
 # === CONFIG ===
 mawha_base_path = "/home/ubuntu/backend/pictures"
 base_output_dir = "/home/ubuntu/backend/data/jsonFiles"
-details_path = "/home/ubuntu/backend/manwha_details.json"
+details_path = "/home/ubuntu/server-backend/json/manwha_details.json"
 
 # === Load details JSON ===
 if os.path.exists(details_path):
