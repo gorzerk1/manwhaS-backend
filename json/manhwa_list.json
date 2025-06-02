@@ -1,45 +1,45 @@
 {
   "absolute-regression": [
-    { "site": "asura", "id": "064bd353" },
+    { "site": "asura" },
     { "site": "kunmanga" }
   ],
   "nano-machine": [
-    { "site": "asura", "id": "bcc10106" }
+    { "site": "asura" }
   ],
   "myst-might-mayhem": [
-    { "site": "asura", "id": "4d5f9ef3" },
+    { "site": "asura" },
     { "site": "yaksha" },
     { "site": "manhwaclan" },
     { "site": "kunmanga" }
   ],
   "the-return-of-the-crazy-demon": [
-    { "site": "asura", "id": "47c1cde1" },
+    { "site": "asura" },
     { "site": "yaksha" }
   ],
   "surviving-as-a-genius-on-borrowed-time": [
-    { "site": "asura", "id": "8613f4a4" },
+    { "site": "asura" },
     { "site": "manhwaclan" }
   ],
   "swordmasters-youngest-son": [
-    { "site": "asura", "id": "0d0fdeac" }
+    { "site": "asura" }
   ],
   "the-priest-of-corruption": [
-    { "site": "asura", "id": "cbb563b0" }
+    { "site": "asura" }
   ],
   "reincarnation-of-the-suicidal-battle-god": [
-    { "site": "asura", "id": "dd4635a9" }
+    { "site": "asura" }
   ],
   "sword-fanatic-wanders-through-the-night": [
-    { "site": "asura", "id": "44f5b30b" }
+    { "site": "asura" }
   ],
   "reaper-of-the-drifting-moon": [
-    { "site": "asura", "id": "42f6d409" }
+    { "site": "asura" }
   ],
   "legend-of-asura-the-venom-dragon": [
-    { "site": "asura", "id": "bc2f0e0d" }
+    { "site": "asura" }
   ],
   "mookhyang-the-origin": [
-    { "site": "asura", "id": "b127c0c8" }
+    { "site": "asura" }
   ],
   "demon-magic-emperor": [
     { "site": "manhuaplus" }
