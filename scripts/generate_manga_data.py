@@ -79,10 +79,10 @@ for manhwa_name in os.listdir(mawha_base_path):
         chapter_json_path = os.path.join(manhwa_output_dir, f"{chapter_folder}.json")
         with open(chapter_json_path, "w", encoding="utf-8") as f:
             json.dump(chapter_data, f, indent=2)
-        print(f"📝 Wrote: {chapter_json_path}")
 
     # === Save description after processing all chapters ===
     description_path = os.path.join(manhwa_output_dir, "manwhaDescription.json")
     with open(description_path, "w", encoding="utf-8") as f:
         json.dump(description, f, indent=2)
-    print(f"✅ Updated: {description_path}")
+
+    print(f"✅ Done: {manhwa_name} from chapter 1 to {chapters_amount}")
