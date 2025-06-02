@@ -5,11 +5,11 @@ const path = require('path');
 const app = express();
 
 // === Set your backend domain (IP or hostname) ===
-app.locals.domain = "http://15.160.208.113:4000"; // <-- change here as needed
+app.locals.domain = "https://server.manhwawut.online"; // <-- change here as needed
 
 // === CORS Setup ===
 app.use(cors({
-  origin: ["http://15.160.208.113:3000", "http://localhost:3000"]
+  origin: ["https://server.manhwawut.online", "http://localhost:3000"]
 }));
 
 // === Serve Static Files ===
