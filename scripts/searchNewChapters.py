@@ -14,7 +14,7 @@ with open("/home/ubuntu/server-backend/json/manhwa_list.json", "r") as f:
 pictures_path = os.path.expanduser("~/backend/pictures")
 log_dir = os.path.expanduser("~/backend/logs/searchNewChapters")
 
-# === GET LATEST LOCAL CHAPTER ===
+# === LOCAL CHAPTER ===
 def get_local_latest_chapter(folder_path):
     chapter_nums = []
     for name in os.listdir(folder_path):
@@ -23,20 +23,41 @@ def get_local_latest_chapter(folder_path):
             chapter_nums.append(int(match.group(1)))
     return max(chapter_nums) if chapter_nums else None
 
-# === FETCH ASURA SERIES URL ===
+# === ASURA SPECIAL HANDLING ===
 def fetch_asura_series_url(name):
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
         res = requests.get("https://asuracomic.net/", headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        containers = soup.find_all("div", class_="w-[100%] h-32 relative")
-        for container in containers:
-            a_tag = container.find("a", href=True)
-            if a_tag and name.replace("-", " ").lower() in a_tag.get("title", "").lower():
-                return a_tag["href"]
+        container = soup.select_one("div.grid.grid-rows-1.grid-cols-1.sm\\:grid-cols-2.bg-\\[\\#222222\\].p-3.pb-0")
+        if not container:
+            raise Exception("Main series grid not found")
+        blocks = container.select("div.w-\\[100\\%\\].h-32.relative")
+        for block in blocks:
+            a_tag = block.find("a", href=True)
+            if a_tag and name in a_tag["href"]:
+                return f"https://asuracomic.net{a_tag['href']}"
     except Exception as e:
-        print(f"❌ Error fetching Asura series URL for {name}: {e}")
+        print(f"❌ Error finding Asura URL for {name}: {e}")
     return None
+
+def extract_asura_latest_chapter(series_url):
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        res = requests.get(series_url, headers=headers, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        blocks = soup.select("div.pl-4.py-2.border.rounded-md.group.w-full.hover\\:bg-\\[\\#343434\\]")
+        chapter_nums = []
+        for block in blocks:
+            a_tag = block.find("a", href=True)
+            if a_tag and "/chapter/" in a_tag["href"]:
+                match = re.search(r'/chapter/(\d{1,4})', a_tag["href"])
+                if match:
+                    chapter_nums.append(int(match.group(1)))
+        return max(chapter_nums) if chapter_nums else None
+    except Exception as e:
+        print(f"❌ Error extracting chapters from Asura: {e}")
+        return None
 
 # === CHECK ONLINE CHAPTER ===
 def check_online_chapter(name, data):
@@ -45,38 +66,31 @@ def check_online_chapter(name, data):
 
     try:
         if site == "asura":
-            series_url = fetch_asura_series_url(name)
-            if not series_url:
-                raise Exception("Asura series URL not found")
-            res = requests.get(series_url, headers=headers, timeout=10)
-            soup = BeautifulSoup(res.text, "html.parser")
-            links = soup.select("a[href*='/chapter/']")
-            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter/(\d{1,4})', link.get("href", "")))]
-            return max(chapter_nums) if chapter_nums else None
+            url = fetch_asura_series_url(name)
+            if not url:
+                raise Exception("Series page not found on Asura")
+            return extract_asura_latest_chapter(url)
 
         elif site == "yaksha":
             url = f"https://yakshascans.com/manga/{name}"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
-            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d{1,4})', link.get("href", "")))]
-            return max(chapter_nums) if chapter_nums else None
+            return max([int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d{1,4})', link.get("href", "")))], default=None)
 
         elif site == "kunmanga":
             url = f"https://kunmanga.com/manga/{name}/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
-            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'chapter-(\d{1,4})', link.get("href", "")))]
-            return max(chapter_nums) if chapter_nums else None
+            return max([int(m.group(1)) for link in links if (m := re.search(r'chapter-(\d{1,4})', link.get("href", "")))], default=None)
 
         elif site == "manhwaclan":
             url = f"https://manhwaclan.com/manga/{name}/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("div.listing-chapters_wrap a[href*='/chapter-']")
-            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d+)', link.get("href", "")))]
-            return max(chapter_nums) if chapter_nums else None
+            return max([int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d+)', link.get("href", "")))], default=None)
 
         elif site == "manhuaplus":
             url = f"https://manhuaplus.org/manga/{name}/"
@@ -85,8 +99,7 @@ def check_online_chapter(name, data):
             items = soup.select("ul#myUL li[data]")
             chapter_nums = []
             for item in items:
-                data_val = item.get("data", "")
-                match = re.search(r'chapter[^0-9]*?(\d{1,4})', data_val, re.IGNORECASE)
+                match = re.search(r'chapter[^0-9]*?(\d{1,4})', item.get("data", ""), re.IGNORECASE)
                 if match:
                     chapter_nums.append(int(match.group(1)))
             return max(chapter_nums) if chapter_nums else None
@@ -96,33 +109,25 @@ def check_online_chapter(name, data):
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("a[href*='/chapter/kingdom-chapter-']")
-            chapter_nums = [int(m.group(1)) for link in links if (m := re.search(r'kingdom-chapter-(\d{1,4})', link.get("href", "")))]
-            return max(chapter_nums) if chapter_nums else None
+            return max([int(m.group(1)) for link in links if (m := re.search(r'kingdom-chapter-(\d{1,4})', link.get("href", "")))], default=None)
 
     except Exception as e:
         print(f"❌ Error for {name} ({site}): {e}")
         return None
 
-    return None
-
-# === LOG NEW CHAPTER ===
+# === LOGGING ===
 def log_new_chapter(name, site, local, online):
     os.makedirs(log_dir, exist_ok=True)
-    log_path = os.path.join(log_dir, "new_chapters.log")
-    with open(log_path, "a") as f:
+    with open(os.path.join(log_dir, "new_chapters.log"), "a") as f:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         f.write(f"[{timestamp}] {site} - {name}: Local {local} → Online {online}\n")
 
-# === LOG NO NEW ===
 def log_no_new_chapters():
     os.makedirs(log_dir, exist_ok=True)
-    log_path = os.path.join(log_dir, "new_chapters.log")
-    ec2_time = datetime.now(dt_timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-    israel_time = datetime.now(timezone("Israel")).strftime("%Y-%m-%d %H:%M:%S")
-    message = f"No new chapters found - {ec2_time} ({israel_time} of GMT+3)"
-    print(message)
-    with open(log_path, "a") as f:
-        f.write(message + "\n")
+    msg = f"No new chapters found - {datetime.now(dt_timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} ({datetime.now(timezone('Israel')).strftime('%Y-%m-%d %H:%M:%S')} GMT+3)"
+    print(msg)
+    with open(os.path.join(log_dir, "new_chapters.log"), "a") as f:
+        f.write(msg + "\n")
 
 # === MAIN ===
 if __name__ == "__main__":
