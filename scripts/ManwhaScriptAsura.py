@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import shutil
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -9,7 +10,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from time import sleep, time
 from datetime import datetime
-import shutil
 
 # Kill zombie Chrome processes
 os.system("pkill -f chrome")
@@ -32,8 +32,12 @@ with open(json_path, "r") as f:
 manhwa_list = []
 for name, sources in full_data.items():
     for entry in sources:
-        if entry.get("site") == "asura" and entry.get("url"):
-            manhwa_list.append({"name": name, "url": entry["url"]})
+        if entry.get("site") == "asura":
+            url = entry.get("url")
+            if url:
+                manhwa_list.append({"name": name, "url": url})
+            else:
+                print(f"⚠️ Missing URL for: {name}")
 
 # === SETUP ===
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
@@ -62,9 +66,9 @@ def wait_for_connection():
             print("❌ Can't connect. Retrying in 5 min...")
         sleep(300)
 
-def get_latest_chapter(series_url):
+def get_latest_chapter(url):
     try:
-        res = requests.get(series_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
         links = soup.select("a[href*='/chapter/']")
         nums = []
@@ -153,10 +157,8 @@ for manhwa in manhwa_list:
                 sleep(3)
             finally:
                 if driver:
-                    try:
-                        driver.quit()
-                    except:
-                        pass
+                    try: driver.quit()
+                    except: pass
 
         if not success:
             log_lines.append(f"[Chapter {chap}] ❌ Failed")
