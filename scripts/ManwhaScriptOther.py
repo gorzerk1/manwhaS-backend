@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from time import sleep
 
+# Kill zombie chrome
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
 os.system("pkill -f chromium")
@@ -16,6 +17,7 @@ os.system("pkill -f selenium")
 # === PATHS ===
 base_dir = os.path.expanduser("~/backend")
 pictures_base = os.path.join(base_dir, "pictures")
+json_path = os.path.expanduser("~/server-backend/json/manhwa_list.json")
 
 # === CHROME SETUP ===
 chrome_options = Options()
@@ -30,7 +32,7 @@ def start_browser():
     return webdriver.Chrome(options=chrome_options)
 
 # === JSON LOAD ===
-with open("json/manhwa_list.json", "r", encoding="utf-8") as f:
+with open(json_path, "r", encoding="utf-8") as f:
     manhwa_data = json.load(f)
 
 # === SITE SETTINGS ===
@@ -63,7 +65,7 @@ def download_kunmanga_chapter(slug, chapter_num, local_path):
     try:
         url = f"https://kunmanga.com/manga/{slug}/chapter-{chapter_num}/"
         chapter_dir = os.path.join(local_path, f"chapter-{chapter_num}")
-        print(f"\n\ud83d\udd0e Checking kunmanga: {slug} Chapter {chapter_num}")
+        print(f"\n🔎 Checking kunmanga: {slug} Chapter {chapter_num}")
 
         driver.get(url)
         sleep(2)
@@ -72,7 +74,7 @@ def download_kunmanga_chapter(slug, chapter_num, local_path):
         img_urls = [img.get_attribute("src") for img in imgs if img.get_attribute("src")]
 
         if len(img_urls) <= 1:
-            print(f"\u2705 No real chapter content for {slug} chapter {chapter_num}")
+            print(f"✅ No real chapter content for {slug} chapter {chapter_num}")
             return False
 
         os.makedirs(chapter_dir, exist_ok=True)
@@ -83,7 +85,7 @@ def download_kunmanga_chapter(slug, chapter_num, local_path):
             res = session.get(img_url, headers=headers, timeout=30)
             with open(path, "wb") as f:
                 f.write(res.content)
-            print(f"\u2705 Saved {name}")
+            print(f"✅ Saved {name}")
 
         with open(os.path.join(chapter_dir, "source.txt"), "w") as f:
             f.write("Downloaded from KunManga")
@@ -91,7 +93,7 @@ def download_kunmanga_chapter(slug, chapter_num, local_path):
         return True
 
     except Exception as e:
-        print(f"\u274c Error checking kunmanga for {slug}: {e}")
+        print(f"❌ Error checking kunmanga for {slug}: {e}")
         return False
 
 # === MAIN ===
@@ -99,11 +101,10 @@ session = requests.Session()
 headers = {"User-Agent": "Mozilla/5.0"}
 driver = start_browser()
 
-# === DOWNLOAD LOGIC ===
 for slug, sources in manhwa_data.items():
     local_path = os.path.join(pictures_base, slug)
     if not os.path.exists(local_path):
-        print(f"\u274c Folder missing for {slug}")
+        print(f"❌ Folder missing for {slug}")
         continue
 
     local_chapters = [
@@ -121,7 +122,7 @@ for slug, sources in manhwa_data.items():
                 continue
 
             config = SITE_CONFIG[site]
-            print(f"\n\ud83d\udd0e Trying {site}: {slug} Chapter {new_chapter}")
+            print(f"\n🔎 Trying {site}: {slug} Chapter {new_chapter}")
 
             if config.get("custom"):
                 success = download_kunmanga_chapter(slug, new_chapter, local_path)
@@ -136,14 +137,14 @@ for slug, sources in manhwa_data.items():
                 sleep(config["sleep"])
 
                 if driver.current_url.rstrip("/") == config["url"].split("/chapter-")[0].format(slug=slug):
-                    print(f"\u2705 No new chapter for {slug} (redirected)")
+                    print(f"✅ No new chapter for {slug} (redirected)")
                     continue
 
                 imgs = driver.find_elements(By.CSS_SELECTOR, config["selector"])
                 img_urls = [img.get_attribute(config["attr"]) for img in imgs if img.get_attribute(config["attr"])]
 
                 if len(img_urls) <= 1:
-                    print(f"\u2705 No real chapter content for {slug} chapter {new_chapter}")
+                    print(f"✅ No real chapter content for {slug} chapter {new_chapter}")
                     continue
 
                 chapter_dir = os.path.join(local_path, f"chapter-{new_chapter}")
@@ -155,7 +156,7 @@ for slug, sources in manhwa_data.items():
                     res = session.get(img_url, headers=headers, timeout=30)
                     with open(path, "wb") as f:
                         f.write(res.content)
-                    print(f"\u2705 Saved {name}")
+                    print(f"✅ Saved {name}")
 
                 with open(os.path.join(chapter_dir, "source.txt"), "w") as f:
                     f.write(f"Downloaded from {site}")
@@ -164,10 +165,10 @@ for slug, sources in manhwa_data.items():
                 break
 
             except Exception as e:
-                print(f"\u274c Error checking {site} for {slug}: {e}")
+                print(f"❌ Error checking {site} for {slug}: {e}")
                 continue
 
         if not downloaded:
-            print(f"\u26a0\ufe0f Chapter {new_chapter} not found on any source for {slug}")
+            print(f"⚠️ Chapter {new_chapter} not found on any source for {slug}")
 
 driver.quit()
