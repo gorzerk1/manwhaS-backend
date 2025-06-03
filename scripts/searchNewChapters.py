@@ -24,7 +24,7 @@ def get_local_latest_chapter(folder_path):
             chapter_nums.append(int(match.group(1)))
     return max(chapter_nums) if chapter_nums else None
 
-# === ASURA FIND URL ===
+# === ASURA URL FINDER ===
 def fetch_asura_series_url(name):
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
@@ -39,7 +39,6 @@ def fetch_asura_series_url(name):
                 return base_url + a_tag["href"]
         return None
 
-    # Try homepage and paginated pages
     for i in range(0, 7):
         page_url = base_url if i == 0 else f"{base_url}/page/{i}"
         url = scan_page(page_url)
@@ -51,27 +50,32 @@ def fetch_asura_series_url(name):
 def extract_asura_latest_chapter(series_url):
     headers = {"User-Agent": "Mozilla/5.0"}
     res = requests.get(series_url, headers=headers, timeout=10)
+    if res.status_code != 200:
+        raise Exception("URL not valid")
     soup = BeautifulSoup(res.text, "html.parser")
     links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
     chapter_nums = [int(m.group(1)) for a in links if (m := re.search(r'/chapter/(\d{1,4})', a["href"]))]
     return max(chapter_nums) if chapter_nums else None
 
-# === CHECK ONLINE CHAPTER ===
+# === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
     site = data.get("site")
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
         if site == "asura":
-            # Use cached url if available
-            if "url" not in data or not data["url"]:
-                url = fetch_asura_series_url(name)
-                data["url"] = url  # 🆕 store dynamically
+            url = data.get("url")
+            try:
+                if url:
+                    return extract_asura_latest_chapter(url)
+                raise Exception("No valid URL")
+            except:
+                new_url = fetch_asura_series_url(name)
+                chapter = extract_asura_latest_chapter(new_url)
+                data["url"] = new_url
                 global updated
                 updated = True
-            else:
-                url = data["url"]
-            return extract_asura_latest_chapter(url)
+                return chapter
 
         elif site == "yaksha":
             url = f"https://yakshascans.com/manga/{name}"
@@ -135,7 +139,7 @@ def log_no_new_chapters():
 if __name__ == "__main__":
     new_found = False
     printed_header = False
-    updated = False  # 🆕 track changes
+    updated = False
 
     for folder in sorted(os.listdir(pictures_path)):
         folder_path = os.path.join(pictures_path, folder)
@@ -174,8 +178,8 @@ if __name__ == "__main__":
     if not new_found:
         log_no_new_chapters()
 
-    # 🆕 SAVE UPDATED JSON
+    # SAVE IF UPDATED
     if updated:
         with open(json_path, "w") as f:
             json.dump(manhwa_list, f, indent=2)
-        print("📝 manhwa_list.json updated with new URLs.")
+        print("📝 manhwa_list.json updated with fixed or missing URLs.")
