@@ -5,7 +5,7 @@ const path = require('path');
 const app = express();
 
 // === Set your backend domain (IP or hostname) ===
-app.locals.domain = "https://server.manhwawut.online"; // <-- change here as needed
+app.locals.domain = "https://server.manhwawut.online";
 
 // === CORS Setup ===
 app.use(cors({

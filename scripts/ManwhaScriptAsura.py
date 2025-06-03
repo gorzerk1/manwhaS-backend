@@ -25,18 +25,6 @@ pictures_base = os.path.join(base_dir, "pictures")
 log_base = os.path.join(base_dir, "logs")
 check_url = "https://asuracomic.net"
 
-# === FIND ID ===
-def fetch_asura_id(slug):
-    try:
-        url = f"https://asuracomic.net/?s={slug.replace('-', '+')}"
-        res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        soup = BeautifulSoup(res.text, "html.parser")
-        for link in soup.select("a[href*='/series/']"):
-            href = link.get("href", "")
-            if f"/series/{slug}-" in href:
-                return href.split(f"/series/{slug}-")[1].split("/")[0]
-    except: return None
-
 # === LOAD LIST ===
 with open(json_path, "r") as f:
     full_data = json.load(f)
@@ -44,10 +32,8 @@ with open(json_path, "r") as f:
 manhwa_list = []
 for name, sources in full_data.items():
     for entry in sources:
-        if entry.get("site") == "asura":
-            series_id = entry.get("id") or fetch_asura_id(name)
-            if series_id:
-                manhwa_list.append({"name": name, "id": series_id})
+        if entry.get("site") == "asura" and entry.get("url"):
+            manhwa_list.append({"name": name, "url": entry["url"]})
 
 # === SETUP ===
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
@@ -76,10 +62,9 @@ def wait_for_connection():
             print("❌ Can't connect. Retrying in 5 min...")
         sleep(300)
 
-def get_latest_chapter(slug_id):
+def get_latest_chapter(series_url):
     try:
-        url = f"https://asuracomic.net/series/{slug_id}"
-        res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        res = requests.get(series_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
         links = soup.select("a[href*='/chapter/']")
         nums = []
@@ -87,7 +72,8 @@ def get_latest_chapter(slug_id):
             href = link.get("href", "")
             try:
                 nums.append(int(href.split("/chapter/")[1].split("/")[0]))
-            except: continue
+            except:
+                continue
         return max(nums) if nums else 1
     except Exception as e:
         print(f"❌ get_latest_chapter error: {e}")
@@ -100,16 +86,15 @@ all_errors = []
 
 for manhwa in manhwa_list:
     name = manhwa["name"]
-    id_ = manhwa["id"]
-    slug_id = f"{name}-{id_}"
-    url_format = f"https://asuracomic.net/series/{slug_id}/chapter/{{}}"
+    series_url = manhwa["url"]
     folder_path = os.path.join(pictures_base, name)
     log_path = os.path.join(log_folder, f"{name}.txt")
     log_lines = []
 
     print(f"\n📚 Processing manhwa: {name}")
     os.makedirs(folder_path, exist_ok=True)
-    last_chapter = get_latest_chapter(slug_id)
+    last_chapter = get_latest_chapter(series_url)
+    url_format = f"{series_url}/chapter/{{}}"
 
     for chap in range(1, last_chapter + 1):
         chap_folder = os.path.join(folder_path, f"chapter-{chap}")
@@ -168,8 +153,10 @@ for manhwa in manhwa_list:
                 sleep(3)
             finally:
                 if driver:
-                    try: driver.quit()
-                    except: pass
+                    try:
+                        driver.quit()
+                    except:
+                        pass
 
         if not success:
             log_lines.append(f"[Chapter {chap}] ❌ Failed")
