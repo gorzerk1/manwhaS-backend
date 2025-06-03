@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from time import sleep
 
-# Kill zombie chrome
+# Kill zombie Chrome processes
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
 os.system("pkill -f chromium")
@@ -101,10 +101,15 @@ session = requests.Session()
 headers = {"User-Agent": "Mozilla/5.0"}
 driver = start_browser()
 
+# === DOWNLOAD LOGIC ===
 for slug, sources in manhwa_data.items():
+    supported_sources = [s for s in sources if s.get("site") in SITE_CONFIG]
+    if not supported_sources:
+        continue
+
     local_path = os.path.join(pictures_base, slug)
     if not os.path.exists(local_path):
-        print(f"❌ Folder missing for {slug}")
+        print(f"⚠️ Folder missing for {slug}")
         continue
 
     local_chapters = [
@@ -113,15 +118,15 @@ for slug, sources in manhwa_data.items():
     ]
     last_local_chapter = max(local_chapters) if local_chapters else 0
 
-    for new_chapter in range(last_local_chapter + 1, last_local_chapter + 6):
+    print(f"\n📘 Now processing: {slug}")
+    new_chapter = last_local_chapter + 1
+
+    while True:
         downloaded = False
-
-        for source in sources:
+        for source in supported_sources:
             site = source["site"]
-            if site not in SITE_CONFIG:
-                continue
-
             config = SITE_CONFIG[site]
+
             print(f"\n🔎 Trying {site}: {slug} Chapter {new_chapter}")
 
             if config.get("custom"):
@@ -135,10 +140,6 @@ for slug, sources in manhwa_data.items():
                 url = config["url"].format(slug=slug, chapter=new_chapter)
                 driver.get(url)
                 sleep(config["sleep"])
-
-                if driver.current_url.rstrip("/") == config["url"].split("/chapter-")[0].format(slug=slug):
-                    print(f"✅ No new chapter for {slug} (redirected)")
-                    continue
 
                 imgs = driver.find_elements(By.CSS_SELECTOR, config["selector"])
                 img_urls = [img.get_attribute(config["attr"]) for img in imgs if img.get_attribute(config["attr"])]
@@ -170,5 +171,8 @@ for slug, sources in manhwa_data.items():
 
         if not downloaded:
             print(f"⚠️ Chapter {new_chapter} not found on any source for {slug}")
+            break 
+        else:
+            new_chapter += 1
 
 driver.quit()
