@@ -1,7 +1,6 @@
 import os
 import json
 import requests
-import shutil
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -10,8 +9,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from time import sleep, time
 from datetime import datetime
+import shutil
 
-# Kill zombie Chrome processes
+# === Kill zombie Chrome ===
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
 os.system("pkill -f chromium")
@@ -34,12 +34,12 @@ for name, sources in full_data.items():
     for entry in sources:
         if entry.get("site") == "asura":
             url = entry.get("url")
-            if url:
+            if isinstance(url, str) and url.startswith("https://asuracomic.net/series/"):
                 manhwa_list.append({"name": name, "url": url})
             else:
-                print(f"⚠️ Missing URL for: {name}")
+                print(f"⚠️ Missing or invalid URL for: {name}")
 
-# === SETUP ===
+# === Setup folders/logs ===
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
 log_folder = os.path.join(log_base, timestamp)
 os.makedirs(log_folder, exist_ok=True)
@@ -66,9 +66,9 @@ def wait_for_connection():
             print("❌ Can't connect. Retrying in 5 min...")
         sleep(300)
 
-def get_latest_chapter(url):
+def get_latest_chapter(base_url):
     try:
-        res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        res = requests.get(base_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
         links = soup.select("a[href*='/chapter/']")
         nums = []
@@ -90,15 +90,15 @@ all_errors = []
 
 for manhwa in manhwa_list:
     name = manhwa["name"]
-    series_url = manhwa["url"]
+    base_url = manhwa["url"]
+    url_format = f"{base_url}/chapter/{{}}"
     folder_path = os.path.join(pictures_base, name)
     log_path = os.path.join(log_folder, f"{name}.txt")
     log_lines = []
 
     print(f"\n📚 Processing manhwa: {name}")
     os.makedirs(folder_path, exist_ok=True)
-    last_chapter = get_latest_chapter(series_url)
-    url_format = f"{series_url}/chapter/{{}}"
+    last_chapter = get_latest_chapter(base_url)
 
     for chap in range(1, last_chapter + 1):
         chap_folder = os.path.join(folder_path, f"chapter-{chap}")
