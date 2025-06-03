@@ -29,14 +29,13 @@ def fetch_asura_series_url(name):
     try:
         res = requests.get("https://asuracomic.net/", headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        container = soup.select_one("div.grid.grid-rows-1.grid-cols-1.sm\\:grid-cols-2.bg-\\[\\#222222\\].p-3.pb-0")
-        if not container:
-            raise Exception("Main series grid not found")
-        blocks = container.select("div.w-\\[100\\%\\].h-32.relative")
-        for block in blocks:
-            a_tag = block.find("a", href=True)
-            if a_tag and name in a_tag["href"]:
-                return f"https://asuracomic.net{a_tag['href']}"
+        blocks = soup.select("div[class*='w-[100%]'][class*='h-32'] a[href]")
+        for a_tag in blocks:
+            href = a_tag['href']
+            if name in href:
+                print(f"🔍 Found Asura link: {href}")
+                return f"https://asuracomic.net{href}"
+        raise Exception("Series not found on homepage")
     except Exception as e:
         print(f"❌ Error finding Asura URL for {name}: {e}")
     return None
@@ -46,17 +45,11 @@ def extract_asura_latest_chapter(series_url):
     try:
         res = requests.get(series_url, headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        blocks = soup.select("div.pl-4.py-2.border.rounded-md.group.w-full.hover\\:bg-\\[\\#343434\\]")
-        chapter_nums = []
-        for block in blocks:
-            a_tag = block.find("a", href=True)
-            if a_tag and "/chapter/" in a_tag["href"]:
-                match = re.search(r'/chapter/(\d{1,4})', a_tag["href"])
-                if match:
-                    chapter_nums.append(int(match.group(1)))
+        chapter_links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
+        chapter_nums = [int(m.group(1)) for a in chapter_links if (m := re.search(r'/chapter/(\d{1,4})', a["href"]))]
         return max(chapter_nums) if chapter_nums else None
     except Exception as e:
-        print(f"❌ Error extracting chapters from Asura: {e}")
+        print(f"❌ Error extracting chapters from Asura ({series_url}): {e}")
         return None
 
 # === CHECK ONLINE CHAPTER ===
