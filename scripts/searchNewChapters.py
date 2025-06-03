@@ -23,34 +23,43 @@ def get_local_latest_chapter(folder_path):
             chapter_nums.append(int(match.group(1)))
     return max(chapter_nums) if chapter_nums else None
 
-# === ASURA SPECIAL HANDLING ===
+# === ASURA SERIES PAGE FINDING ===
 def fetch_asura_series_url(name):
     headers = {"User-Agent": "Mozilla/5.0"}
-    try:
-        res = requests.get("https://asuracomic.net/", headers=headers, timeout=10)
-        soup = BeautifulSoup(res.text, "html.parser")
-        blocks = soup.select("div[class*='w-[100%]'][class*='h-32'] a[href]")
-        for a_tag in blocks:
-            href = a_tag['href']
-            if name in href:
-                print(f"🔍 Found Asura link: {href}")
-                return f"https://asuracomic.net{href}"
-        raise Exception("Series not found on homepage")
-    except Exception as e:
-        print(f"❌ Error finding Asura URL for {name}: {e}")
-    return None
+    base_url = "https://asuracomic.net"
 
+    def scan_page(url):
+        res = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        blocks = soup.select("div.w-full.p-1.pt-1.pb-3.border-b-\\[1px\\]")
+        for block in blocks:
+            a_tag = block.select_one("span.text-\\[15px\\] a[href]")
+            if a_tag and name in a_tag["href"]:
+                print(f"🔍 Found on: {url} → {a_tag['href']}")
+                return base_url + a_tag["href"]
+        return None
+
+    # Try homepage
+    url = scan_page(base_url)
+    if url:
+        return url
+
+    # Try paginated pages
+    for i in range(1, 7):
+        url = scan_page(f"{base_url}/page/{i}")
+        if url:
+            return url
+
+    raise Exception("Series page not found on Asura")
+
+# === ASURA LATEST CHAPTER ===
 def extract_asura_latest_chapter(series_url):
     headers = {"User-Agent": "Mozilla/5.0"}
-    try:
-        res = requests.get(series_url, headers=headers, timeout=10)
-        soup = BeautifulSoup(res.text, "html.parser")
-        chapter_links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
-        chapter_nums = [int(m.group(1)) for a in chapter_links if (m := re.search(r'/chapter/(\d{1,4})', a["href"]))]
-        return max(chapter_nums) if chapter_nums else None
-    except Exception as e:
-        print(f"❌ Error extracting chapters from Asura ({series_url}): {e}")
-        return None
+    res = requests.get(series_url, headers=headers, timeout=10)
+    soup = BeautifulSoup(res.text, "html.parser")
+    links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
+    chapter_nums = [int(m.group(1)) for a in links if (m := re.search(r'/chapter/(\d{1,4})', a["href"]))]
+    return max(chapter_nums) if chapter_nums else None
 
 # === CHECK ONLINE CHAPTER ===
 def check_online_chapter(name, data):
@@ -60,8 +69,6 @@ def check_online_chapter(name, data):
     try:
         if site == "asura":
             url = fetch_asura_series_url(name)
-            if not url:
-                raise Exception("Series page not found on Asura")
             return extract_asura_latest_chapter(url)
 
         elif site == "yaksha":
