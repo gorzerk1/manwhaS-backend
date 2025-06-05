@@ -4,14 +4,8 @@ const path = require('path');
 const router = express.Router();
 
 router.get('/api/latest-updates', async (req, res) => {
-  const folders = [
-    "absolute-regression", "nano-machine", "myst-might-mayhem",
-    "the-return-of-the-crazy-demon", "surviving-as-a-genius-on-borrowed-time",
-    "swordmasters-youngest-son", "the-priest-of-corruption",
-    "reincarnation-of-the-suicidal-battle-god", "sword-fanatic-wanders-through-the-night",
-    "reaper-of-the-drifting-moon", "legend-of-asura-the-venom-dragon",
-    "mookhyang-the-origin", "kingdom", "demon-magic-emperor"
-  ];
+  const manhwaList = require('../json/manhwa_list.json');
+  const folders = Object.keys(manhwaList);
 
   function getTimeAgo(timeString) {
     if (!timeString) return '';
