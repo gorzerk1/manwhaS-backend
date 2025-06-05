@@ -25,7 +25,7 @@ def log(msg):
 def get_images(chapter_path):
     return sorted([
         f for f in chapter_path.iterdir()
-        if f.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp']
+        if f.suffix.lower() in ['.jpg', '.jpeg', '.png']
     ], key=lambda f: f.name)
 
 
@@ -60,17 +60,17 @@ def convert_and_split(image_path, base_index, chapter_path):
 def process_chapter(chapter):
     log(f"\n📂 {chapter.name}")
 
-    # Remove old .webp files first
+    # Remove old .webp before scanning
     for f in chapter.glob("*.webp"):
         f.unlink()
 
+    # Now get original images only
     files = get_images(chapter)
     idx = 1
     for f in files:
         added = convert_and_split(f, idx, chapter)
         idx += added
-        if f.exists():
-            f.unlink()
+        f.unlink()
 
 
 def main():
