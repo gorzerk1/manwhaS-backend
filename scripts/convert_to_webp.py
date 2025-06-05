@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image
 
 MAX_HEIGHT = 16383
-ROOT = Path("/home/ubuntu/testing/my-space")
+ROOT = Path("/home/ubuntu/backend/pictures")
 MANWHA = "mookhyang-the-origin"
 LOG_DIR = Path("/home/ubuntu/backend/logs")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
