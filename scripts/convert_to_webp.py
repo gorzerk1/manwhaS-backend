@@ -14,20 +14,17 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / f"log_{time.strftime('%-m-%-d-%Y-%H-%M')}.log"
 
-
 def log(msg):
     timestamp = time.strftime("[%H:%M:%S]")
     print(f"{timestamp} {msg}")
     with open(LOG_FILE, "a") as f:
         f.write(f"{timestamp} {msg}\n")
 
-
-def get_images(chapter_path):
+def get_ordered_files(chapter_path):
     return sorted([
         f for f in chapter_path.iterdir()
-        if f.suffix.lower() in ['.jpg', '.jpeg', '.png']
+        if f.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp']
     ], key=lambda f: f.name)
-
 
 def convert_and_split(image_path, base_index, chapter_path):
     img = Image.open(image_path).convert("RGB")
@@ -56,22 +53,26 @@ def convert_and_split(image_path, base_index, chapter_path):
         count += 1
     return count
 
-
 def process_chapter(chapter):
     log(f"\n📂 {chapter.name}")
+    files = get_ordered_files(chapter)
 
-    # Remove old .webp before scanning
-    for f in chapter.glob("*.webp"):
-        f.unlink()
-
-    # Now get original images only
-    files = get_images(chapter)
     idx = 1
     for f in files:
-        added = convert_and_split(f, idx, chapter)
-        idx += added
-        f.unlink()
+        target_name = f"{idx:03}.webp"
+        target_path = chapter / target_name
 
+        if f.suffix.lower() == ".webp":
+            if f.name != target_name:
+                f.rename(target_path)
+                log(f"RENAMED: {f.name} → {target_name}")
+            else:
+                log(f"SKIPPED: {f.name} (already correct)")
+            idx += 1
+        else:
+            added = convert_and_split(f, idx, chapter)
+            idx += added
+            f.unlink()
 
 def main():
     base = ROOT / MANWHA
@@ -83,7 +84,6 @@ def main():
     for chapter in sorted(base.glob("chapter-*")):
         if chapter.is_dir():
             process_chapter(chapter)
-
 
 if __name__ == "__main__":
     main()
