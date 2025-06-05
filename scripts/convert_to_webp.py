@@ -5,8 +5,8 @@ from pathlib import Path
 from PIL import Image
 
 MAX_HEIGHT = 16383
-ROOT = Path("/home/ubuntu/backend/pictures")
-MANWHA = "steel-covenant"
+ROOT = Path("/home/ubuntu/testing/my-space")
+MANWHA = "mookhyang-the-origin"
 LOG_DIR = Path("/home/ubuntu/backend/logs")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / f"{MANWHA}_conversion_{int(time.time())}.log"
