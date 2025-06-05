@@ -1,31 +1,38 @@
 import os
+import re
 from pathlib import Path
 
-BASE_DIR = Path("/home/ubuntu/backend/pictures/mookhyang-the-origin")
+BASE_PATH = Path("/home/ubuntu/backend/pictures/mookhyang-the-origin")
 
-def list_chapters(base_dir):
-    return sorted([p for p in base_dir.glob("chapter-*") if p.is_dir()])
+def extract_number(filename):
+    match = re.match(r"(\d+)\.webp$", filename)
+    return int(match.group(1)) if match else None
 
-def list_existing_webps_sorted(chapter_dir):
-    return sorted(
-        [f.name for f in chapter_dir.glob("*.webp") if f.is_file()]
-    )
+def check_chapter(chapter_path):
+    print(f"\n📂 {chapter_path.name}")
+
+    files = [f.name for f in chapter_path.iterdir() if f.suffix == '.webp']
+    numbers = sorted(filter(None, (extract_number(f) for f in files)))
+
+    if not numbers:
+        print("  (no .webp files)")
+        return
+
+    min_num = min(numbers)
+    max_num = max(numbers)
+    existing = set(numbers)
+
+    for i in range(min_num, max_num + 1):
+        filename = f"{i:03}.webp"
+        if i in existing:
+            print(f"  OK:   {filename}")
+        else:
+            print(f"  MISSING: {filename}")
 
 def main():
-    print(f"Checking local images in: {BASE_DIR}\n")
-    chapters = list_chapters(BASE_DIR)
-
-    for chapter in chapters:
-        print(f"📂 {chapter.name}")
-        existing = list_existing_webps_sorted(chapter)
-
-        if not existing:
-            print("  ⚠️  No .webp files found.")
-            continue
-
-        for f in existing:
-            print(f"  OK:   {f}")
-        print()
+    for chapter in sorted(BASE_PATH.glob("chapter-*")):
+        if chapter.is_dir():
+            check_chapter(chapter)
 
 if __name__ == "__main__":
     main()
