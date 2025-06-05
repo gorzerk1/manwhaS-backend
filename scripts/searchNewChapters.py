@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone as dt_timezone
 from pytz import timezone
-from urllib.parse import unquote  # <-- needed for fix
+from urllib.parse import unquote
 
 # === PATHS ===
 json_path = "/home/ubuntu/server-backend/json/manhwa_list.json"
@@ -29,7 +29,6 @@ def get_local_latest_chapter(folder_path):
 def fetch_asura_series_url(name):
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
-
     slug = name.lower().replace("-", "")
 
     def scan_page(url):
@@ -146,9 +145,15 @@ if __name__ == "__main__":
     printed_header = False
     updated = False
 
-    for folder in sorted(os.listdir(pictures_path)):
+    for folder in sorted(manhwa_list.keys()):
         folder_path = os.path.join(pictures_path, folder)
-        if os.path.isdir(folder_path) and folder in manhwa_list:
+
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            print(f"📁 Created folder: {folder_path}")
+            continue
+
+        if os.path.isdir(folder_path):
             if not printed_header:
                 print("_" * 86)
                 printed_header = True
@@ -183,7 +188,6 @@ if __name__ == "__main__":
     if not new_found:
         log_no_new_chapters()
 
-    # SAVE IF UPDATED
     if updated:
         with open(json_path, "w") as f:
             json.dump(manhwa_list, f, indent=2)
