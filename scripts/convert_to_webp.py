@@ -59,33 +59,17 @@ def convert_and_split(image_path, base_index, chapter_path):
 
 def process_chapter(chapter):
     log(f"\n📂 {chapter.name}")
+
+    # Remove old .webp files first
+    for f in chapter.glob("*.webp"):
+        f.unlink()
+
     files = get_images(chapter)
-
-    # Track already used indexes
-    existing_indexes = set()
-    for f in files:
-        if f.suffix.lower() == ".webp" and f.name[:3].isdigit():
-            existing_indexes.add(int(f.name[:3]))
-
     idx = 1
     for f in files:
-        if f.suffix.lower() == ".webp":
-            while idx in existing_indexes:
-                idx += 1
-            expected_name = f"{idx:03}.webp"
-            new_path = chapter / expected_name
-            if f.name != expected_name:
-                f.rename(new_path)
-            log(f"EXISTING: {expected_name}")
-            existing_indexes.add(idx)
-            idx += 1
-        else:
-            while idx in existing_indexes:
-                idx += 1
-            added = convert_and_split(f, idx, chapter)
-            for i in range(added):
-                existing_indexes.add(idx + i)
-            idx += added
+        added = convert_and_split(f, idx, chapter)
+        idx += added
+        if f.exists():
             f.unlink()
 
 
