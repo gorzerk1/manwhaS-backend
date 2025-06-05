@@ -6,6 +6,9 @@
   "nano-machine": [
     { "site": "asura" }
   ],
+  "steel-covenant": [
+    { "site": "yaksha"}
+  ],
   "myst-might-mayhem": [
     { "site": "asura" },
     { "site": "yaksha" },
@@ -36,9 +39,6 @@
     { "site": "asura" }
   ],
   "legend-of-asura-the-venom-dragon": [
-    { "site": "asura" }
-  ],
-  "limit-breaking-genius-mage": [
     { "site": "asura" }
   ],
   "mookhyang-the-origin": [
