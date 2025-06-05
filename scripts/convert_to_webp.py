@@ -58,8 +58,16 @@ def convert_image(image_path, index_start):
 
     return outputs
 
+def get_folder_size(path):
+    return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+
+def format_size(size_bytes):
+    return f"{size_bytes / (1024 ** 3):.2f} GB"
+
 def process_chapter(chapter):
     log(f"\n📂 {chapter.name}")
+    before_size = get_folder_size(chapter)
+
     files = get_image_files(chapter)
     working_list = []
 
@@ -87,8 +95,14 @@ def process_chapter(chapter):
                 final_outputs.append(target.name)
                 index += 1
 
+    after_size = get_folder_size(chapter)
+    saved = before_size - after_size
+    percent_saved = (saved / before_size * 100) if before_size > 0 else 0
+
     log(f"✅ Total .webp files: {len(final_outputs)}")
     log(f"📄 Files: {', '.join(final_outputs)}")
+    log(f"📦 Size before: {format_size(before_size)} → after: {format_size(after_size)}")
+    log(f"💾 Saved: {format_size(saved)} ({percent_saved:.2f}%)")
 
 def main():
     base = ROOT / MANWHA
