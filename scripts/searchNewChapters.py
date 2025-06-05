@@ -151,7 +151,6 @@ if __name__ == "__main__":
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
             print(f"📁 Created folder: {folder_path}")
-            continue
 
         if os.path.isdir(folder_path):
             if not printed_header:
