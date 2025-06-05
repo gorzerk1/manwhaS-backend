@@ -44,12 +44,12 @@ def convert_and_collect(chapter_path):
         key=lambda x: x.name
     )
 
-    temp_files = []  # list of tuples (Image, source_name) OR (Path, None)
+    temp_files = []  # (Image or Path, source_name or None)
 
     for file in files:
         ext = file.suffix.lower()
         if ext == ".webp":
-            temp_files.append((file, None))  # just keep it for final rename
+            temp_files.append((file, None))
             log(f"EXISTING: {file.name}")
             skipped += 1
         else:
@@ -70,17 +70,20 @@ def convert_and_collect(chapter_path):
                 failed += 1
                 log(f"ERROR: {file} - {e}")
 
-    # remove all existing .webp so we reassign names in clean order
+    # delete old .webp files before save
     for f in chapter_path.glob("*.webp"):
-        f.unlink()
+        f.unlink(missing_ok=True)
 
-    # save everything in final order
+    # save all in final order with 001.webp, 002.webp...
     for idx, (entry, source_name) in enumerate(temp_files, start=1):
         out_name = f"{idx:03}.webp"
         out_path = chapter_path / out_name
         if isinstance(entry, Path):
-            entry.rename(out_path)
-            log(f"RENAMED: {entry.name} → {out_name}")
+            if entry.name != out_name:
+                entry.rename(out_path)
+                log(f"RENAMED: {entry.name} → {out_name}")
+            else:
+                log(f"KEPT: {entry.name}")
         else:
             entry.save(out_path, "webp")
             log(f"CONVERTED: {source_name} → {out_name}")
