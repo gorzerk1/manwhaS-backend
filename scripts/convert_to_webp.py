@@ -15,6 +15,7 @@ skipped = 0
 failed = 0
 start_size = 0
 end_size = 0
+WEBP_MAX = 16383
 
 def log(msg):
     print(msg)
@@ -29,6 +30,13 @@ def convert_image(image_path):
 
     try:
         img = Image.open(image_path).convert("RGB")
+        width, height = img.size
+
+        if width > WEBP_MAX or height > WEBP_MAX:
+            failed += 1
+            log(f"SKIPPED (Too Large): {image_path} - {width}x{height} / {WEBP_MAX}px limit")
+            return
+
         webp_path = image_path.with_suffix(".webp")
         if webp_path.exists():
             log(f"SKIPPED: {webp_path} already exists")
@@ -44,7 +52,7 @@ def convert_image(image_path):
         else:
             failed += 1
             webp_path.unlink(missing_ok=True)
-            log(f"FAILED: {image_path}")
+            log(f"FAILED (Empty webp): {image_path}")
     except Exception as e:
         failed += 1
         log(f"ERROR: {image_path} - {e}")
