@@ -25,68 +25,62 @@ def log(msg):
 def folder_size(path):
     return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
 
-def split_image(img, base_name):
-    width, height = img.size
-    parts = []
-    offset = 0
-    while offset < height:
-        slice_height = min(MAX_HEIGHT, height - offset)
-        part = img.crop((0, offset, width, offset + slice_height))
-        parts.append(part)
-        offset += slice_height
-    return parts
+def process_image(file, output_dir, counter):
+    global converted, failed
+    try:
+        img = Image.open(file).convert("RGB")
+        width, height = img.size
 
-def convert_and_collect(chapter_path):
-    global converted, skipped, failed
+        if height > MAX_HEIGHT:
+            log(f"SPLIT: {file.name} - {width}x{height}")
+            offset = 0
+            while offset < height:
+                slice_height = min(MAX_HEIGHT, height - offset)
+                part = img.crop((0, offset, width, offset + slice_height))
+                out_path = output_dir / f"{counter:03}.webp"
+                part.save(out_path, "webp")
+                log(f"CONVERTED: {file.name} → {out_path.name}")
+                counter += 1
+                converted += 1
+                offset += slice_height
+        else:
+            out_path = output_dir / f"{counter:03}.webp"
+            img.save(out_path, "webp")
+            log(f"CONVERTED: {file.name} → {out_path.name}")
+            counter += 1
+            converted += 1
+
+        img.close()
+        file.unlink()
+    except Exception as e:
+        failed += 1
+        log(f"ERROR: {file.name} - {e}")
+    return counter
+
+def process_chapter(chapter_path):
+    global skipped
 
     files = sorted(
         [f for f in chapter_path.iterdir() if f.suffix.lower() in [".jpg", ".jpeg", ".png", ".webp"]],
         key=lambda x: x.name
     )
 
-    temp_files = []  # (Image or Path, source_name or None)
+    counter = 1
 
     for file in files:
         ext = file.suffix.lower()
         if ext == ".webp":
-            temp_files.append((file, None))
-            log(f"EXISTING: {file.name}")
+            new_name = f"{counter:03}.webp"
+            new_path = chapter_path / new_name
+            if file.name != new_name:
+                file.rename(new_path)
+                log(f"RENAMED: {file.name} → {new_name}")
+            else:
+                log(f"KEPT: {file.name}")
+            counter += 1
             skipped += 1
         else:
-            try:
-                img = Image.open(file).convert("RGB")
-                if img.height > MAX_HEIGHT:
-                    log(f"SPLIT: {file.name} - {img.width}x{img.height}")
-                    parts = split_image(img, file.name)
-                    for part in parts:
-                        temp_files.append((part, file.name))
-                        converted += 1
-                else:
-                    temp_files.append((img, file.name))
-                    converted += 1
-                img.close()
-                file.unlink()
-            except Exception as e:
-                failed += 1
-                log(f"ERROR: {file} - {e}")
-
-    # delete old .webp files before save
-    for f in chapter_path.glob("*.webp"):
-        f.unlink(missing_ok=True)
-
-    # save all in final order with 001.webp, 002.webp...
-    for idx, (entry, source_name) in enumerate(temp_files, start=1):
-        out_name = f"{idx:03}.webp"
-        out_path = chapter_path / out_name
-        if isinstance(entry, Path):
-            if entry.name != out_name:
-                entry.rename(out_path)
-                log(f"RENAMED: {entry.name} → {out_name}")
-            else:
-                log(f"KEPT: {entry.name}")
-        else:
-            entry.save(out_path, "webp")
-            log(f"CONVERTED: {source_name} → {out_name}")
+            counter = process_image(file, chapter_path, counter)
 
 def main():
     global converted, skipped, failed
@@ -102,7 +96,7 @@ def main():
         if not chapter.is_dir():
             continue
         log(f"\nProcessing {chapter}")
-        convert_and_collect(chapter)
+        process_chapter(chapter)
 
     end_size = folder_size(base)
     saved = start_size - end_size
