@@ -14,6 +14,9 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / f"log_{time.strftime('%-m-%-d-%Y-%H-%M')}.log"
 
+total_before_size = 0
+total_after_size = 0
+
 def log(msg):
     timestamp = time.strftime("[%H:%M:%S]")
     print(f"{timestamp} {msg}")
@@ -65,19 +68,19 @@ def format_size(size_bytes):
     return f"{size_bytes / (1024 ** 3):.2f} GB"
 
 def process_chapter(chapter):
+    global total_before_size, total_after_size
     log(f"\n📂 {chapter.name}")
     before_size = get_folder_size(chapter)
+    total_before_size += before_size
 
     files = get_image_files(chapter)
     working_list = []
 
-    # Move all to TEMP and collect info
     for i, f in enumerate(files):
         temp_path = move_to_temp(f, i)
         ext = f.suffix.lower()
         working_list.append({"original": temp_path, "type": ext})
 
-    # Process and write back in order
     index = 1
     final_outputs = []
     for entry in working_list:
@@ -96,13 +99,14 @@ def process_chapter(chapter):
                 index += 1
 
     after_size = get_folder_size(chapter)
+    total_after_size += after_size
     saved = before_size - after_size
     percent_saved = (saved / before_size * 100) if before_size > 0 else 0
 
     log(f"✅ Total .webp files: {len(final_outputs)}")
     log(f"📄 Files: {', '.join(final_outputs)}")
     log(f"📦 Size before: {format_size(before_size)} → after: {format_size(after_size)}")
-    log(f"💾 Saved: {format_size(saved)} ({percent_saved:.2f}%)")
+    log(f"📮 Saved: {format_size(saved)} ({percent_saved:.2f}%)")
 
 def main():
     base = ROOT / MANWHA
@@ -114,6 +118,13 @@ def main():
     for chapter in sorted(base.glob("chapter-*")):
         if chapter.is_dir():
             process_chapter(chapter)
+
+    total_saved = total_before_size - total_after_size
+    percent_total = (total_saved / total_before_size * 100) if total_before_size > 0 else 0
+    log("\n===== OVERALL SUMMARY =====")
+    log(f"📦 Total size before: {format_size(total_before_size)}")
+    log(f"📆 Total size after: {format_size(total_after_size)}")
+    log(f"📢 Total saved: {format_size(total_saved)} ({percent_total:.2f}%)")
 
 if __name__ == "__main__":
     main()
