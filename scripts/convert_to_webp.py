@@ -3,13 +3,17 @@ import sys
 import time
 from pathlib import Path
 from PIL import Image
+from datetime import datetime  # NEW
 
 MAX_HEIGHT = 16383
 ROOT = Path("/home/ubuntu/backend/pictures")
 MANWHA = "mookhyang-the-origin"
-LOG_DIR = Path("/home/ubuntu/backend/logs")
+
+# UPDATED log path and file name
+LOG_DIR = Path("/home/ubuntu/backend/logs/convertToWebLog")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
-LOG_FILE = LOG_DIR / f"{MANWHA}_conversion_{int(time.time())}.log"
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+LOG_FILE = LOG_DIR / f"{MANWHA}_conversion_{timestamp}.log"
 
 converted = 0
 skipped = 0
