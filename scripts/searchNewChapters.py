@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone as dt_timezone
 from pytz import timezone
+from urllib.parse import unquote  # <-- needed for fix
 
 # === PATHS ===
 json_path = "/home/ubuntu/server-backend/json/manhwa_list.json"
@@ -24,10 +25,12 @@ def get_local_latest_chapter(folder_path):
             chapter_nums.append(int(match.group(1)))
     return max(chapter_nums) if chapter_nums else None
 
-# === ASURA URL FINDER ===
+# === ASURA URL FINDER (FIXED) ===
 def fetch_asura_series_url(name):
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
+
+    slug = name.lower().replace("-", "")
 
     def scan_page(url):
         res = requests.get(url, headers=headers, timeout=10)
@@ -35,8 +38,10 @@ def fetch_asura_series_url(name):
         blocks = soup.select("div.w-full.p-1.pt-1.pb-3.border-b-\\[1px\\]")
         for block in blocks:
             a_tag = block.select_one("span.text-\\[15px\\] a[href]")
-            if a_tag and name in a_tag["href"]:
-                return base_url + a_tag["href"]
+            if a_tag:
+                href_clean = unquote(a_tag["href"]).lower().replace("-", "")
+                if slug in href_clean:
+                    return base_url + a_tag["href"]
         return None
 
     for i in range(0, 7):
