@@ -20,7 +20,7 @@ def log(msg):
     with open(LOG_FILE, "a") as f:
         f.write(f"{timestamp} {msg}\n")
 
-def get_ordered_files(chapter_path):
+def get_ordered_images(chapter_path):
     return sorted([
         f for f in chapter_path.iterdir()
         if f.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp']
@@ -55,21 +55,25 @@ def convert_and_split(image_path, base_index, chapter_path):
 
 def process_chapter(chapter):
     log(f"\n📂 {chapter.name}")
-    files = get_ordered_files(chapter)
 
+    files = get_ordered_images(chapter)
     idx = 1
+
     for f in files:
         target_name = f"{idx:03}.webp"
         target_path = chapter / target_name
 
         if f.suffix.lower() == ".webp":
+            # Already a webp, just rename if needed
             if f.name != target_name:
                 f.rename(target_path)
                 log(f"RENAMED: {f.name} → {target_name}")
             else:
                 log(f"SKIPPED: {f.name} (already correct)")
             idx += 1
-        else:
+
+        elif f.suffix.lower() in [".jpg", ".jpeg", ".png"]:
+            # Convert image (maybe split)
             added = convert_and_split(f, idx, chapter)
             idx += added
             f.unlink()
