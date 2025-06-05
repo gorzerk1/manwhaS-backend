@@ -1,12 +1,17 @@
 import os
 import re
 import time
+from datetime import datetime
 from pathlib import Path
 
 BASE_PATH = Path("/home/ubuntu/backend/pictures/mookhyang-the-origin")
 LOG_DIR = Path("/home/ubuntu/backend/logs/isImageValid")
-LOG_DIR.mkdir(parents=True, exist_ok=True)  # Make sure the folder exists
-LOG_FILE = LOG_DIR / f"log_{int(time.time())}.log"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Create log file with format: log_6-5-2025-16-22.log
+now = datetime.now()
+timestamp = now.strftime("log_%-m-%-d-%Y-%H-%M.log")  # For Linux. Use "%#m" if on Windows.
+LOG_FILE = LOG_DIR / timestamp
 
 def log(msg):
     print(msg)
