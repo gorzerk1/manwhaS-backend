@@ -100,13 +100,9 @@ def process_chapter(chapter):
 
     after_size = get_folder_size(chapter)
     total_after_size += after_size
-    saved = before_size - after_size
-    percent_saved = (saved / before_size * 100) if before_size > 0 else 0
 
     log(f"✅ Total .webp files: {len(final_outputs)}")
     log(f"📄 Files: {', '.join(final_outputs)}")
-    log(f"📦 Size before: {format_size(before_size)} → after: {format_size(after_size)}")
-    log(f"📮 Saved: {format_size(saved)} ({percent_saved:.2f}%)")
 
 def main():
     base = ROOT / MANWHA
