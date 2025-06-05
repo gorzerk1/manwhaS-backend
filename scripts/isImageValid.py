@@ -4,9 +4,9 @@ import time
 from pathlib import Path
 
 BASE_PATH = Path("/home/ubuntu/backend/pictures/mookhyang-the-origin")
-LOG_DIR = Path("/home/ubuntu/backend/logs")
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-LOG_FILE = LOG_DIR / f"isImageValid_{int(time.time())}.log"
+LOG_DIR = Path("/home/ubuntu/backend/logs/isImageValid")
+LOG_DIR.mkdir(parents=True, exist_ok=True)  # Make sure the folder exists
+LOG_FILE = LOG_DIR / f"log_{int(time.time())}.log"
 
 def log(msg):
     print(msg)
@@ -33,7 +33,7 @@ def check_chapter(chapter_path):
     for i in range(min_num, max_num + 1):
         filename = f"{i:03}.webp"
         if i in existing:
-            log(f"  OK:   {filename}")
+            log(f"  OK:     {filename}")
         else:
             log(f"  MISSING: {filename}")
 
