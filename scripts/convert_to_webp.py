@@ -101,12 +101,13 @@ def process_chapter(chapter):
         log(f"RENAMED: {temp_path.name} → {target.name}")
         idx += 1
 
-    # ✅ Final verification
-    final_names = set(f"{i:03}.webp" for i in range(1, idx))
-    actual_names = set(f.name for f in chapter.glob("*.webp"))
+    # ✅ Final verification (corrected)
+    output_files = sorted(chapter.glob("*.webp"))
+    actual_names = set(f.name for f in output_files)
+    expected_names = set(f"{i:03}.webp" for i in range(1, len(output_files) + 1))
 
-    missing = final_names - actual_names
-    extra = actual_names - final_names
+    missing = expected_names - actual_names
+    extra = actual_names - expected_names
 
     if missing:
         log(f"❌ MISSING FINAL FILES: {', '.join(sorted(missing))}")
