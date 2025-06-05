@@ -6,7 +6,7 @@ from PIL import Image
 
 MAX_HEIGHT = 16383
 ROOT = Path("/home/ubuntu/backend/pictures")
-MANWHA = "limit-breaking-genius-mage"
+MANWHA = "steel-covenant"
 LOG_DIR = Path("/home/ubuntu/backend/logs")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / f"{MANWHA}_conversion_{int(time.time())}.log"
