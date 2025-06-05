@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from pathlib import Path
 from PIL import Image
 from datetime import datetime
@@ -7,112 +8,108 @@ from datetime import datetime
 MAX_HEIGHT = 16383
 ROOT = Path("/home/ubuntu/backend/pictures")
 MANWHA = "mookhyang-the-origin"
-
 LOG_DIR = Path("/home/ubuntu/backend/logs/convertToWebLog")
+TEMP_DIR = Path("/home/ubuntu/backend/temp")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-LOG_FILE = LOG_DIR / f"{MANWHA}_conversion_{timestamp}.log"
+TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
-converted = 0
-failed = 0
+now = datetime.now().strftime("log_%m-%d-%Y-%H-%M")
+LOG_FILE = LOG_DIR / f"{now}.log"
 
 def log(msg):
-    print(msg)
+    timestamp = datetime.now().strftime("[%H:%M:%S]")
+    print(f"{timestamp} {msg}")
     with open(LOG_FILE, "a") as f:
-        f.write(msg + "\n")
+        f.write(f"{timestamp} {msg}\n")
 
-def folder_size(path):
-    return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
-
-def split_and_save(img, base_name, chapter_path, counter):
-    global converted
+def split_image(img: Image.Image) -> list:
     width, height = img.size
+    slices = []
     offset = 0
+    index = 1
     while offset < height:
         slice_height = min(MAX_HEIGHT, height - offset)
-        part = img.crop((0, offset, width, offset + slice_height))
-        out_path = chapter_path / f"{counter:03}.webp"
-        part.save(out_path, "webp")
-        log(f"SPLIT+CONVERTED: {base_name} → {out_path.name}")
+        crop = img.crop((0, offset, width, offset + slice_height))
+        out_path = TEMP_DIR / f"split_{index:02}.jpg"
+        crop.save(out_path, "JPEG")
+        slices.append(out_path)
         offset += slice_height
-        counter += 1
-        converted += 1
-    return counter
+        index += 1
+    return slices
 
-def convert_image(file, chapter_path, counter):
-    global failed, converted
-    try:
-        img = Image.open(file).convert("RGB")
-        if img.height > MAX_HEIGHT:
-            log(f"SPLIT: {file.name} - {img.width}x{img.height}")
-            counter = split_and_save(img, file.name, chapter_path, counter)
-        else:
-            out_path = chapter_path / f"{counter:03}.webp"
-            img.save(out_path, "webp")
-            log(f"CONVERTED: {file.name} → {out_path.name}")
-            counter += 1
-            converted += 1
-        img.close()
-    except Exception as e:
-        failed += 1
-        log(f"ERROR: {file.name} - {e}")
-    file.unlink(missing_ok=True)
-    return counter
+def convert_to_webp(img_path: Path, out_path: Path):
+    img = Image.open(img_path).convert("RGB")
+    img.save(out_path, "WEBP")
+    img.close()
 
-def process_chapter(chapter_path):
-    # Clean existing .webp files to avoid name conflict
-    for f in chapter_path.glob("*.webp"):
-        f.unlink(missing_ok=True)
+def stitch_images(webp_parts: list, out_path: Path):
+    imgs = [Image.open(p).convert("RGB") for p in webp_parts]
+    total_height = sum(im.height for im in imgs)
+    max_width = max(im.width for im in imgs)
+    new_img = Image.new("RGB", (max_width, total_height))
 
-    files = sorted(
-        [f for f in chapter_path.iterdir() if f.suffix.lower() in [".jpg", ".jpeg", ".png", ".webp"]],
-        key=lambda x: x.name
-    )
+    y = 0
+    for im in imgs:
+        new_img.paste(im, (0, y))
+        y += im.height
 
-    counter = 1
-    for file in files:
-        ext = file.suffix.lower()
-        if ext == ".webp":
-            # Load and re-save to assign correct sequence
-            try:
-                img = Image.open(file).convert("RGB")
-                out_path = chapter_path / f"{counter:03}.webp"
-                img.save(out_path, "webp")
-                log(f"REWRITE: {file.name} → {out_path.name}")
-                counter += 1
-                img.close()
-                file.unlink(missing_ok=True)
-            except Exception as e:
-                failed += 1
-                log(f"ERROR: {file.name} - {e}")
-        else:
-            counter = convert_image(file, chapter_path, counter)
+    new_img.save(out_path, "WEBP")
+    for im in imgs:
+        im.close()
+
+def process_chapter(chapter_path: Path):
+    items = sorted(chapter_path.glob("*"))
+    final_images = []
+
+    for item in items:
+        if item.suffix.lower() == ".webp":
+            final_images.append(item)
+        elif item.suffix.lower() in [".jpg", ".jpeg", ".png"]:
+            img = Image.open(item).convert("RGB")
+            if img.height <= MAX_HEIGHT:
+                out_path = chapter_path / (item.stem + ".webp")
+                img.save(out_path, "WEBP")
+                log(f"CONVERTED: {item.name} → {out_path.name}")
+                final_images.append(out_path)
+            else:
+                log(f"SPLIT+STITCH: {item.name} too tall")
+                slices = split_image(img)
+                webp_parts = []
+                for slice_img in slices:
+                    webp_part = slice_img.with_suffix(".webp")
+                    convert_to_webp(slice_img, webp_part)
+                    webp_parts.append(webp_part)
+                    slice_img.unlink()
+                stitched_out = chapter_path / (item.stem + ".webp")
+                stitch_images(webp_parts, stitched_out)
+                log(f"STITCHED: {item.name} → {stitched_out.name}")
+                final_images.append(stitched_out)
+                for w in webp_parts:
+                    w.unlink()
+            img.close()
+            item.unlink()
+
+    # Renaming in order
+    final_images_sorted = sorted(final_images, key=lambda x: x.name)
+    for idx, file in enumerate(final_images_sorted, start=1):
+        new_name = f"{idx:03}.webp"
+        new_path = chapter_path / new_name
+        if file.name != new_name:
+            file.rename(new_path)
+        log(f"ORDERED: {file.name} → {new_name}")
 
 def main():
-    global converted, failed
     base = ROOT / MANWHA
     if not base.exists():
-        print(f"Folder not found: {base}")
+        log(f"Path not found: {base}")
         sys.exit(1)
 
-    log(f"Starting conversion in: {base}")
-    start_size = folder_size(base)
-
+    log(f"STARTING: {base}")
     for chapter in sorted(base.glob("chapter-*")):
-        if not chapter.is_dir():
-            continue
-        log(f"\nProcessing {chapter}")
-        process_chapter(chapter)
-
-    end_size = folder_size(base)
-    saved = start_size - end_size
-
-    log("\n=== SUMMARY ===")
-    log(f"Total before: {start_size / 1024 / 1024:.2f} MB")
-    log(f"Total after:  {end_size / 1024 / 1024:.2f} MB")
-    log(f"Saved:       {saved / 1024 / 1024:.2f} MB")
-    log(f"Converted:   {converted}")
-    log(f"Failed:      {failed}")
+        if chapter.is_dir():
+            log(f"\n📂 {chapter.name}")
+            process_chapter(chapter)
+    log("\nDONE.")
 
 if __name__ == "__main__":
     main()
