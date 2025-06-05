@@ -122,10 +122,15 @@ for manhwa in manhwa_list:
         for attempt in range(1, 6):
             driver = None
             try:
+                print(f"🌐 Opening browser...")
                 driver = start_browser()
                 driver.set_page_load_timeout(60)
+                driver.set_script_timeout(30)
+
+                print(f"🔗 Connecting to chapter page...")
                 driver.get(chap_url)
 
+                print(f"⏳ Waiting for image elements...")
                 WebDriverWait(driver, 5).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "img.object-cover.mx-auto"))
                 )
@@ -134,9 +139,15 @@ for manhwa in manhwa_list:
                 if not images:
                     raise Exception("No images found")
 
+                print(f"🖼️ Found {len(images)} images. Starting download...")
                 os.makedirs(chap_folder, exist_ok=True)
                 for i, img in enumerate(images):
-                    src = img.get_attribute("src")
+                    print(f"⬇️ Downloading image {i+1}/{len(images)}...")
+                    try:
+                        src = WebDriverWait(driver, 10).until(lambda d: img.get_attribute("src"))
+                    except:
+                        raise Exception(f"Timeout getting src for image {i+1}")
+
                     ext = src.split(".")[-1].split("?")[0]
                     file_name = f"{i+1:03d}.{ext}"
                     img_data = requests.get(src, headers={"User-Agent": "Mozilla/5.0"}, timeout=10).content
