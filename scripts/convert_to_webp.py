@@ -1,11 +1,10 @@
 import os
 import sys
 import time
-from PIL import Image
 from pathlib import Path
+from PIL import Image
 
-MAX_WEBP_HEIGHT = 16383
-
+MAX_HEIGHT = 16383
 ROOT = Path("/home/ubuntu/backend/pictures")
 MANWHA = "mookhyang-the-origin"
 LOG_DIR = Path("/home/ubuntu/backend/logs")
@@ -15,8 +14,6 @@ LOG_FILE = LOG_DIR / f"{MANWHA}_conversion_{int(time.time())}.log"
 converted = 0
 skipped = 0
 failed = 0
-start_size = 0
-end_size = 0
 
 def log(msg):
     print(msg)
@@ -26,68 +23,67 @@ def log(msg):
 def folder_size(path):
     return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
 
-def convert_image(image_path):
-    global converted, failed
+def split_and_save(img, base_name, chapter_path, counter):
+    width, height = img.size
+    parts = []
+    offset = 0
+    part_index = 0
+    while offset < height:
+        slice_height = min(MAX_HEIGHT, height - offset)
+        part = img.crop((0, offset, width, offset + slice_height))
+        file_name = f"{counter:03}.webp"
+        out_path = chapter_path / file_name
+        part.save(out_path, "webp")
+        parts.append(out_path)
+        log(f"SPLIT+CONVERTED: {base_name} → {file_name}")
+        offset += slice_height
+        counter += 1
+    return parts, counter
 
-    try:
-        img = Image.open(image_path).convert("RGB")
-        width, height = img.size
+def convert_and_rename(chapter_path):
+    global converted, skipped, failed
+    files = sorted(
+        [f for f in chapter_path.iterdir() if f.suffix.lower() in [".jpg", ".jpeg", ".png", ".webp"]],
+        key=lambda x: x.name
+    )
+    counter = 1
+    final_files = []
 
-        if height > MAX_WEBP_HEIGHT:
-            log(f"SKIPPED (Too Large): {image_path} - {width}x{height} / {MAX_WEBP_HEIGHT}px limit -> splitting")
+    for file in files:
+        ext = file.suffix.lower()
+        if ext == ".webp":
+            new_name = f"{counter:03}.webp"
+            new_path = chapter_path / new_name
+            if file.name != new_name:
+                file.rename(new_path)
+            log(f"EXISTING: {new_name}")
+            counter += 1
+            skipped += 1
+            continue
 
-            mid = height // 2
-            top = img.crop((0, 0, width, mid))
-            bottom = img.crop((0, mid, width, height))
+        try:
+            img = Image.open(file).convert("RGB")
+            width, height = img.size
 
-            base_name = image_path.stem
-            parent = image_path.parent
-
-            out1 = parent / f"{base_name}_1.webp"
-            out2 = parent / f"{base_name}_2.webp"
-
-            top.save(out1, "webp")
-            bottom.save(out2, "webp")
-
-            top.close()
-            bottom.close()
-            img.close()
-
-            if out1.exists() and out2.exists():
-                os.remove(image_path)
-                converted += 2
-                log(f"SPLIT+CONVERTED: {image_path} → {out1}")
-                log(f"SPLIT+CONVERTED: {image_path} → {out2}")
+            if height > MAX_HEIGHT:
+                log(f"SPLIT: {file} - {width}x{height}")
+                parts, counter = split_and_save(img, file.name, chapter_path, counter)
+                converted += len(parts)
             else:
-                failed += 1
-                log(f"FAILED: Split save failed for {image_path}")
-            return
+                out_path = chapter_path / f"{counter:03}.webp"
+                img.save(out_path, "webp")
+                log(f"CONVERTED: {file.name} → {out_path.name}")
+                counter += 1
+                converted += 1
 
-        # Normal conversion
-        webp_path = image_path.with_suffix(".webp")
-        if webp_path.exists():
-            log(f"SKIPPED (Already WebP): {webp_path}")
-            return
-
-        img.save(webp_path, "webp")
-        img.close()
-
-        if webp_path.exists() and webp_path.stat().st_size > 0:
-            os.remove(image_path)
-            converted += 1
-            log(f"CONVERTED: {image_path} → {webp_path}")
-        else:
+            img.close()
+            file.unlink()
+        except Exception as e:
             failed += 1
-            webp_path.unlink(missing_ok=True)
-            log(f"FAILED: {image_path}")
-
-    except Exception as e:
-        failed += 1
-        log(f"ERROR: {image_path} - {e}")
+            log(f"ERROR: {file} - {e}")
 
 def main():
-    global start_size, end_size, skipped, converted, failed
-
+    global converted, skipped, failed
     base = ROOT / MANWHA
     if not base.exists():
         print(f"Folder not found: {base}")
@@ -100,13 +96,7 @@ def main():
         if not chapter.is_dir():
             continue
         log(f"\nProcessing {chapter}")
-        files = sorted(chapter.glob("*"))
-        for img_path in files:
-            ext = img_path.suffix.lower()
-            if ext in [".jpg", ".jpeg", ".png"]:
-                convert_image(img_path)
-            elif ext == ".webp":
-                skipped += 1
+        convert_and_rename(chapter)
 
     end_size = folder_size(base)
     saved = start_size - end_size
