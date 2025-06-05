@@ -1,21 +1,29 @@
 import os
 import re
+import time
 from pathlib import Path
 
 BASE_PATH = Path("/home/ubuntu/backend/pictures/mookhyang-the-origin")
+LOG_DIR = Path("/home/ubuntu/backend/logs")
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOG_DIR / f"isImageValid_{int(time.time())}.log"
+
+def log(msg):
+    print(msg)
+    with open(LOG_FILE, "a") as f:
+        f.write(msg + "\n")
 
 def extract_number(filename):
     match = re.match(r"(\d+)\.webp$", filename)
     return int(match.group(1)) if match else None
 
 def check_chapter(chapter_path):
-    print(f"\n📂 {chapter_path.name}")
-
+    log(f"\n📂 {chapter_path.name}")
     files = [f.name for f in chapter_path.iterdir() if f.suffix == '.webp']
     numbers = sorted(filter(None, (extract_number(f) for f in files)))
 
     if not numbers:
-        print("  (no .webp files)")
+        log("  (no .webp files)")
         return
 
     min_num = min(numbers)
@@ -25,9 +33,9 @@ def check_chapter(chapter_path):
     for i in range(min_num, max_num + 1):
         filename = f"{i:03}.webp"
         if i in existing:
-            print(f"  OK:   {filename}")
+            log(f"  OK:   {filename}")
         else:
-            print(f"  MISSING: {filename}")
+            log(f"  MISSING: {filename}")
 
 def main():
     for chapter in sorted(BASE_PATH.glob("chapter-*")):
