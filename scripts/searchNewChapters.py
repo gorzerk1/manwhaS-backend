@@ -71,7 +71,11 @@ def extract_asura_latest_chapter(series_url):
         homepage_url = base_url
         homepage_res = requests.get(homepage_url, headers=headers, timeout=10)
         homepage_soup = BeautifulSoup(homepage_res.text, "html.parser")
-        series_blocks = homepage_soup.select("div.w-full.p-1.pt-1.pb-3.border-b-[1px]")
+        series_blocks = [
+                            div for div in homepage_soup.find_all("div", class_="w-full p-1 pt-1 pb-3")
+                            if "border-b-[1px]" in div.get("class", [])
+                        ]
+
 
         for block in series_blocks:
             series_link_tag = block.select_one("span.text-[15px] a[href]")
