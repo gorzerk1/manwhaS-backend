@@ -69,39 +69,36 @@ def extract_asura_latest_chapter(series_url, local_chapter=None):
             if local_chapter is None or chapter_num > local_chapter:
                 chapter_nums.append(chapter_num)
                 print(f"➡️ Found NEW chapter link: {a['href']} → Chapter {chapter_num}")
+            else:
+                print(f"↪️ Skipping old chapter: {chapter_num}")
 
     if not chapter_nums:
         print("❌ No new chapter numbers found above local")
-        return local_chapter if local_chapter is not None else None
+        return local_chapter
 
     chapter_nums = sorted(set(chapter_nums), reverse=True)
-
     for chapter in chapter_nums:
         chapter_url = f"{series_url}/chapter/{chapter}"
         print(f"🔗 Checking latest chapter URL: {chapter_url}")
         try:
             chap_res = requests.get(chapter_url, headers=headers, timeout=10)
             if chap_res.status_code != 200:
+                print("❌ Chapter page not reachable")
                 continue
+
             chap_soup = BeautifulSoup(chap_res.text, "html.parser")
-            target_div = chap_soup.select_one(r"div.py-8.-mx-5.md\:mx-0.flex.flex-col.items-center.justify-center")
-            if target_div:
-                check = target_div.select_one(".w-full.mx-auto.center")
-                if check is not None:
-                    print(f"✅ Chapter {chapter} passed content check")
-                    return chapter
-                else:
-                    print(f"⚠️ Chapter {chapter} exists but missing expected content, ignoring as false positive")
+            content_div = chap_soup.find("div", class_="w-full mx-auto center")
+            if content_div:
+                print(f"✅ Chapter {chapter} passed content check")
+                return chapter
             else:
-                print(f"❌ Expected outer div not found on chapter page")
+                print(f"⚠️ Chapter {chapter} exists but missing expected content, ignoring as false positive")
         except Exception as e:
             print(f"❌ Error checking chapter page: {e}")
+            continue
 
-    if local_chapter is not None:
-        print(f"ℹ️ No valid new chapter found, fallback to local_chapter: {local_chapter}")
-        return local_chapter
-
-    return None
+    print(f"ℹ️ No valid new chapter found, fallback to local_chapter: {local_chapter}")
+    return local_chapter
 
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data, local_chapter=None):
@@ -128,48 +125,44 @@ def check_online_chapter(name, data, local_chapter=None):
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
-            nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d{1,4})', link.get("href", "")))]
-            return max(nums) if nums else local_chapter
+            return max([int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d+)', link.get("href", "")))], default=None)
 
         elif site == "kunmanga":
             url = f"https://kunmanga.com/manga/{name}/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
-            nums = [int(m.group(1)) for link in links if (m := re.search(r'chapter-(\d{1,4})', link.get("href", "")))]
-            return max(nums) if nums else local_chapter
+            return max([int(m.group(1)) for link in links if (m := re.search(r'chapter-(\d+)', link.get("href", "")))], default=None)
 
         elif site == "manhwaclan":
             url = f"https://manhwaclan.com/manga/{name}/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("div.listing-chapters_wrap a[href*='/chapter-']")
-            nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d+)', link.get("href", "")))]
-            return max(nums) if nums else local_chapter
+            return max([int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d+)', link.get("href", "")))], default=None)
 
         elif site == "manhuaplus":
             url = f"https://manhuaplus.org/manga/{name}/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             items = soup.select("ul#myUL li[data]")
-            nums = []
+            chapter_nums = []
             for item in items:
                 match = re.search(r'chapter[^0-9]*?(\d{1,4})', item.get("data", ""), re.IGNORECASE)
                 if match:
-                    nums.append(int(match.group(1)))
-            return max(nums) if nums else local_chapter
+                    chapter_nums.append(int(match.group(1)))
+            return max(chapter_nums) if chapter_nums else None
 
         elif site == "readkingdom":
             url = "https://ww4.readkingdom.com"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("a[href*='/chapter/kingdom-chapter-']")
-            nums = [int(m.group(1)) for link in links if (m := re.search(r'kingdom-chapter-(\d{1,4})', link.get("href", "")))]
-            return max(nums) if nums else local_chapter
+            return max([int(m.group(1)) for link in links if (m := re.search(r'kingdom-chapter-(\d{1,4})', link.get("href", "")))], default=None)
 
     except Exception as e:
         print(f"❌ Error for {name} ({site}): {e}")
-        return local_chapter
+        return None
 
 # === LOGGING ===
 def log_new_chapter(name, site, local, online):
