@@ -51,7 +51,7 @@ def fetch_asura_series_url(name):
     raise Exception("Series page not found on Asura")
 
 # === ASURA LATEST CHAPTER ===
-def extract_asura_latest_chapter(series_url):
+def extract_asura_latest_chapter(series_url, local_chapter=None):
     headers = {"User-Agent": "Mozilla/5.0"}
     print(f"🔍 Fetching series page: {series_url}")
     res = requests.get(series_url, headers=headers, timeout=10)
@@ -66,11 +66,12 @@ def extract_asura_latest_chapter(series_url):
         m = re.search(r'/chapter/(\d{1,4})', a["href"])
         if m:
             chapter_num = int(m.group(1))
-            chapter_nums.append(chapter_num)
-            print(f"➡️ Found chapter link: {a['href']} → Chapter {chapter_num}")
+            if local_chapter is None or chapter_num > local_chapter:
+                chapter_nums.append(chapter_num)
+                print(f"➡️ Found chapter link: {a['href']} → Chapter {chapter_num}")
 
     if not chapter_nums:
-        print("❌ No chapter numbers found on series page")
+        print("❌ No new chapter numbers found above local")
         return None
 
     max_chapter = max(chapter_nums)
