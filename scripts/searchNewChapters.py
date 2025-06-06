@@ -54,29 +54,39 @@ def fetch_asura_series_url(name):
 def extract_asura_latest_chapter(series_url):
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
-    res = requests.get(series_url, headers=headers, timeout=10)
-    if res.status_code != 200:
-        raise Exception("URL not valid")
-    soup = BeautifulSoup(res.text, "html.parser")
-    links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
+
+    try:
+        res = requests.get(series_url, headers=headers, timeout=10)
+        res.raise_for_status()
+        soup = BeautifulSoup(res.text, "html.parser")
+        links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
+    except Exception as e:
+        print(f"❌ Error fetching series page: {e}")
+        return None
 
     def is_paywalled(url):
-        res = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(res.text, "html.parser")
-        return soup.select_one("div[data-state='open'][class*='z-50']") is not None
+        try:
+            res = requests.get(url, headers=headers, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+            return soup.select_one("div[data-state='open'][class*='z-50']") is not None
+        except Exception as e:
+            print(f"❌ Error checking paywall at {url}: {e}")
+            return True  # safer to assume paywalled if error
 
     valid_chapters = []
     for a in links:
-        m = re.search(r'/chapter/(\d{1,4})', a["href"])
-        if m:
+        try:
+            m = re.search(r'/chapter/(\d{1,4})', a["href"])
+            if not m:
+                continue
             full_url = a["href"]
             if not full_url.startswith("http"):
                 full_url = base_url + full_url
-            try:
-                if not is_paywalled(full_url):
-                    valid_chapters.append(int(m.group(1)))
-            except:
-                continue
+            if not is_paywalled(full_url):
+                valid_chapters.append(int(m.group(1)))
+        except Exception as e:
+            print(f"❌ Error parsing chapter link: {e}")
+            continue
 
     return max(valid_chapters) if valid_chapters else None
 
