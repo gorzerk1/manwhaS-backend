@@ -53,60 +53,55 @@ def fetch_asura_series_url(name):
 # === ASURA LATEST CHAPTER ===
 def extract_asura_latest_chapter(series_url):
     headers = {"User-Agent": "Mozilla/5.0"}
-    base_url = "https://asuracomic.net"
-
+    print(f"🔍 Fetching series page: {series_url}")
     res = requests.get(series_url, headers=headers, timeout=10)
     if res.status_code != 200:
+        print("❌ Failed to load series page")
         raise Exception("URL not valid")
 
     soup = BeautifulSoup(res.text, "html.parser")
     links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
-    chapter_nums = [int(m.group(1)) for a in links if (m := re.search(r'/chapter/(\d{1,4})', a["href"]))]
-    latest_chapter = max(chapter_nums) if chapter_nums else None
+    chapter_nums = []
+    for a in links:
+        m = re.search(r'/chapter/(\d{1,4})', a["href"])
+        if m:
+            chapter_num = int(m.group(1))
+            chapter_nums.append(chapter_num)
+            print(f"➡️ Found chapter link: {a['href']} → Chapter {chapter_num}")
 
-    # Check if latest chapter is paywalled from homepage
-    if latest_chapter:
-        slug_match = re.search(r'/series/([^/]+)', series_url)
-        series_slug = slug_match.group(1) if slug_match else ""
-        homepage_url = base_url
-        homepage_res = requests.get(homepage_url, headers=headers, timeout=10)
-        homepage_soup = BeautifulSoup(homepage_res.text, "html.parser")
-        series_blocks = [
-                            div for div in homepage_soup.find_all("div", class_="w-full p-1 pt-1 pb-3")
-                            if "border-b-[1px]" in div.get("class", [])
-                        ]
+    if not chapter_nums:
+        print("❌ No chapter numbers found on series page")
+        return None
 
+    max_chapter = max(chapter_nums)
+    chapter_url = f"{series_url}/chapter/{max_chapter}"
+    print(f"🔗 Checking latest chapter URL: {chapter_url}")
 
-        for block in series_blocks:
-            series_link_tag = block.select_one("span.text-[15px] a[href]")
-            if not series_link_tag:
-                continue
-            series_href = series_link_tag["href"]
-            if series_slug not in series_href:
-                continue
+    # check the chapter page
+    try:
+        chap_res = requests.get(chapter_url, headers=headers, timeout=10)
+        if chap_res.status_code != 200:
+            print("❌ Chapter page not reachable")
+            return None
 
-            chapter_entries = block.select("div.flex.flex-row.justify-between.rounded-sm")
-            for entry in chapter_entries:
-                chapter_link_tag = entry.select_one("a[href*='/chapter/']")
-                if not chapter_link_tag:
-                    continue
-                chapter_href = chapter_link_tag["href"]
-                chapter_match = re.search(r'/chapter/(\d+)', chapter_href)
-                if not chapter_match:
-                    continue
-                chapter_num = int(chapter_match.group(1))
-                if chapter_num != latest_chapter:
-                    continue
+        chap_soup = BeautifulSoup(chap_res.text, "html.parser")
+        target_div = chap_soup.select_one("div.py-8.-mx-5.md\:mx-0.flex.flex-col.items-center.justify-center")
+        if target_div:
+            check = target_div.select_one(".w-full.mx-auto.center")
+            if check is None:
+                print(f"⚠️ Chapter {max_chapter} exists but missing expected content, ignoring as false positive")
+                return None
+            else:
+                print(f"✅ Chapter {max_chapter} passed content check")
+        else:
+            print("❌ Expected outer div not found on chapter page")
+            return None
 
-                svg_icon = entry.select_one("svg.lucide.lucide-timer")
-                if svg_icon:
-                    print(f"🔒 Latest chapter {latest_chapter} is paywalled.")
-                    return None
-                else:
-                    print(f"✅ Latest chapter {latest_chapter} is free.")
-                    return latest_chapter
+    except Exception as e:
+        print(f"❌ Error checking chapter page: {e}")
+        return None
 
-    return None
+    return max_chapter
 
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
