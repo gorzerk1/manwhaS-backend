@@ -9,7 +9,7 @@ MAX_HEIGHT = 16383
 ROOT = Path("/home/ubuntu/backend/pictures")
 LOG_DIR = Path("/home/ubuntu/backend/logs/convertToWebLog")
 TEMP_DIR = Path("/home/ubuntu/backend/temp")
-MANHWA_LIST_JSON = Path("/home/ubuntu/backend/json/manhwa_list.json")
+MANHWA_LIST_JSON = Path("/home/ubuntu/server-backend/json/manhwa_list.json")
 
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
