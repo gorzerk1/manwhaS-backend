@@ -78,7 +78,6 @@ def extract_asura_latest_chapter(series_url, local_chapter=None):
     chapter_url = f"{series_url}/chapter/{max_chapter}"
     print(f"🔗 Checking latest chapter URL: {chapter_url}")
 
-    # check the chapter page
     try:
         chap_res = requests.get(chapter_url, headers=headers, timeout=10)
         if chap_res.status_code != 200:
@@ -105,7 +104,7 @@ def extract_asura_latest_chapter(series_url, local_chapter=None):
     return max_chapter
 
 # === ONLINE CHAPTER CHECK ===
-def check_online_chapter(name, data):
+def check_online_chapter(name, data, local_chapter=None):
     site = data.get("site")
     headers = {"User-Agent": "Mozilla/5.0"}
 
@@ -114,11 +113,11 @@ def check_online_chapter(name, data):
             url = data.get("url")
             try:
                 if url:
-                    return extract_asura_latest_chapter(url)
+                    return extract_asura_latest_chapter(url, local_chapter)
                 raise Exception("No valid URL")
             except:
                 new_url = fetch_asura_series_url(name)
-                chapter = extract_asura_latest_chapter(new_url)
+                chapter = extract_asura_latest_chapter(new_url, local_chapter)
                 data["url"] = new_url
                 global updated
                 updated = True
@@ -189,7 +188,6 @@ if __name__ == "__main__":
     updated = False
 
     for folder in manhwa_list:
-
         folder_path = os.path.join(pictures_path, folder)
 
         if not os.path.exists(folder_path):
@@ -209,7 +207,7 @@ if __name__ == "__main__":
 
             for data in entries:
                 site = data.get("site", "unknown")
-                online_chapter = check_online_chapter(folder, data)
+                online_chapter = check_online_chapter(folder, data, local_chapter)
 
                 if online_chapter is not None and (not local_chapter or online_chapter > local_chapter):
                     tag = "(prefered)" if not preferred_logged else "(skipped)"
