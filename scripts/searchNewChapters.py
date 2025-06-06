@@ -25,7 +25,7 @@ def get_local_latest_chapter(folder_path):
             chapter_nums.append(int(match.group(1)))
     return max(chapter_nums) if chapter_nums else None
 
-# === ASURA URL FINDER (FIXED) ===
+# === ASURA URL FINDER ===
 def fetch_asura_series_url(name):
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
@@ -87,12 +87,15 @@ def extract_asura_latest_chapter(series_url, local_chapter=None):
                 continue
 
             chap_soup = BeautifulSoup(chap_res.text, "html.parser")
-            content_div = chap_soup.find("div", class_="w-full mx-auto center")
-            if content_div:
-                print(f"✅ Chapter {chapter} passed content check")
-                return chapter
-            else:
-                print(f"⚠️ Chapter {chapter} exists but missing expected content, ignoring as false positive")
+            found = chap_soup.find_all("div")
+            for div in found:
+                classes = div.get("class", [])
+                if all(cls in classes for cls in ["w-full", "mx-auto", "center"]):
+                    print(f"✅ Chapter {chapter} passed content check")
+                    return chapter
+
+            print(f"⚠️ Chapter {chapter} exists but missing expected content, ignoring as false positive")
+
         except Exception as e:
             print(f"❌ Error checking chapter page: {e}")
             continue
