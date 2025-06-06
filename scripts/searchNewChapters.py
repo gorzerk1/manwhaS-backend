@@ -184,7 +184,7 @@ if __name__ == "__main__":
     printed_header = False
     updated = False
 
-    for folder in sorted(manhwa_list.keys()):
+    for folder in manhwa_list:
         folder_path = os.path.join(pictures_path, folder)
 
         if not os.path.exists(folder_path):
