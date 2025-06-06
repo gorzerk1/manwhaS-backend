@@ -85,7 +85,7 @@ def extract_asura_latest_chapter(series_url):
             return None
 
         chap_soup = BeautifulSoup(chap_res.text, "html.parser")
-        target_div = chap_soup.select_one("div.py-8.-mx-5.md\:mx-0.flex.flex-col.items-center.justify-center")
+        target_div = chap_soup.select_one(r"div.py-8.-mx-5.md\:mx-0.flex.flex-col.items-center.justify-center")
         if target_div:
             check = target_div.select_one(".w-full.mx-auto.center")
             if check is None:
