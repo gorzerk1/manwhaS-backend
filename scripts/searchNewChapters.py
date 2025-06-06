@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timezone as dt_timezone
 from pytz import timezone
 from urllib.parse import unquote
+from urllib.parse import urljoin
 
 # === PATHS ===
 json_path = "/home/ubuntu/server-backend/json/manhwa_list.json"
@@ -58,7 +59,7 @@ def extract_asura_latest_chapter(series_url):
         raise Exception("URL not valid")
     soup = BeautifulSoup(res.text, "html.parser")
     links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
-    
+
     chapter_nums = []
     chapter_hrefs = {}
     for a in links:
@@ -77,13 +78,12 @@ def extract_asura_latest_chapter(series_url):
     if not latest_href:
         return None
 
-    latest_url = latest_href if latest_href.startswith("http") else f"https://asuracomic.net{latest_href}"
+    latest_url = urljoin("https://asuracomic.net", latest_href)
     res = requests.get(latest_url, headers=headers, timeout=10)
     if "style_loginModal" in res.text or "Login" in res.text:
         return None  # paywalled
 
     return latest
-
 
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
