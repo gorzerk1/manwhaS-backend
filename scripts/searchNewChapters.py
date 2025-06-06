@@ -51,7 +51,7 @@ def fetch_asura_series_url(name):
     raise Exception("Series page not found on Asura")
 
 # === ASURA LATEST CHAPTER ===
-def extract_asura_latest_chapter(series_url):
+def extract_asura_latest_chapter(series_url, local_chapter=0):
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
 
@@ -83,10 +83,14 @@ def extract_asura_latest_chapter(series_url):
             m = re.search(r'/chapter/(\d{1,4})', a["href"])
             if not m:
                 continue
+            chapter_num = int(m.group(1))
+            if chapter_num < local_chapter:
+                continue  # skip old chapters
+
             href = a["href"]
             full_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
             if not is_paywalled(full_url):
-                valid_chapters.append(int(m.group(1)))
+                valid_chapters.append(chapter_num)
         except Exception as e:
             print(f"❌ Error parsing chapter link: {e}")
             continue
