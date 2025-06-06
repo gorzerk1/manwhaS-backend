@@ -53,55 +53,13 @@ def fetch_asura_series_url(name):
 # === ASURA LATEST CHAPTER ===
 def extract_asura_latest_chapter(series_url):
     headers = {"User-Agent": "Mozilla/5.0"}
-    print(f"🔍 Fetching series page: {series_url}")
     res = requests.get(series_url, headers=headers, timeout=10)
     if res.status_code != 200:
-        print("❌ Failed to load series page")
         raise Exception("URL not valid")
-
     soup = BeautifulSoup(res.text, "html.parser")
     links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
-    chapter_nums = []
-    for a in links:
-        m = re.search(r'/chapter/(\d{1,4})', a["href"])
-        if m:
-            chapter_num = int(m.group(1))
-            chapter_nums.append(chapter_num)
-            print(f"➡️ Found chapter link: {a['href']} → Chapter {chapter_num}")
-
-    if not chapter_nums:
-        print("❌ No chapter numbers found on series page")
-        return None
-
-    max_chapter = max(chapter_nums)
-    chapter_url = f"{series_url}/chapter/{max_chapter}"
-    print(f"🔗 Checking latest chapter URL: {chapter_url}")
-
-    # check the chapter page
-    try:
-        chap_res = requests.get(chapter_url, headers=headers, timeout=10)
-        if chap_res.status_code != 200:
-            print("❌ Chapter page not reachable")
-            return None
-
-        chap_soup = BeautifulSoup(chap_res.text, "html.parser")
-        target_div = chap_soup.select_one(r"div.py-8.-mx-5.md\:mx-0.flex.flex-col.items-center.justify-center")
-        if target_div:
-            check = target_div.select_one(".w-full.mx-auto.center")
-            if check is None:
-                print(f"⚠️ Chapter {max_chapter} exists but missing expected content, ignoring as false positive")
-                return None
-            else:
-                print(f"✅ Chapter {max_chapter} passed content check")
-        else:
-            print("❌ Expected outer div not found on chapter page")
-            return None
-
-    except Exception as e:
-        print(f"❌ Error checking chapter page: {e}")
-        return None
-
-    return max_chapter
+    chapter_nums = [int(m.group(1)) for a in links if (m := re.search(r'/chapter/(\d{1,4})', a["href"]))]
+    return max(chapter_nums) if chapter_nums else None
 
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
@@ -187,8 +145,7 @@ if __name__ == "__main__":
     printed_header = False
     updated = False
 
-    for folder in manhwa_list:
-
+    for folder in sorted(manhwa_list.keys()):
         folder_path = os.path.join(pictures_path, folder)
 
         if not os.path.exists(folder_path):
