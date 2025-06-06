@@ -50,7 +50,7 @@ def fetch_asura_series_url(name):
             return url
     raise Exception("Series page not found on Asura")
 
-# === ASURA LATEST CHAPTER (FIXED) ===
+# === ASURA LATEST CHAPTER ===
 def extract_asura_latest_chapter(series_url, local_chapter=None):
     headers = {"User-Agent": "Mozilla/5.0"}
     print(f"🔍 Fetching series page: {series_url}")
@@ -124,12 +124,53 @@ def check_online_chapter(name, data, local_chapter=None):
                 updated = True
                 return chapter
 
-        # Other sites remain unchanged...
-        return None
+        elif site == "yaksha":
+            url = f"https://yakshascans.com/manga/{name}"
+            res = requests.get(url, headers=headers, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+            links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
+            nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d{1,4})', link.get("href", "")))]
+            return max(nums) if nums else local_chapter
+
+        elif site == "kunmanga":
+            url = f"https://kunmanga.com/manga/{name}/"
+            res = requests.get(url, headers=headers, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+            links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
+            nums = [int(m.group(1)) for link in links if (m := re.search(r'chapter-(\d{1,4})', link.get("href", "")))]
+            return max(nums) if nums else local_chapter
+
+        elif site == "manhwaclan":
+            url = f"https://manhwaclan.com/manga/{name}/"
+            res = requests.get(url, headers=headers, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+            links = soup.select("div.listing-chapters_wrap a[href*='/chapter-']")
+            nums = [int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d+)', link.get("href", "")))]
+            return max(nums) if nums else local_chapter
+
+        elif site == "manhuaplus":
+            url = f"https://manhuaplus.org/manga/{name}/"
+            res = requests.get(url, headers=headers, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+            items = soup.select("ul#myUL li[data]")
+            nums = []
+            for item in items:
+                match = re.search(r'chapter[^0-9]*?(\d{1,4})', item.get("data", ""), re.IGNORECASE)
+                if match:
+                    nums.append(int(match.group(1)))
+            return max(nums) if nums else local_chapter
+
+        elif site == "readkingdom":
+            url = "https://ww4.readkingdom.com"
+            res = requests.get(url, headers=headers, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+            links = soup.select("a[href*='/chapter/kingdom-chapter-']")
+            nums = [int(m.group(1)) for link in links if (m := re.search(r'kingdom-chapter-(\d{1,4})', link.get("href", "")))]
+            return max(nums) if nums else local_chapter
 
     except Exception as e:
         print(f"❌ Error for {name} ({site}): {e}")
-        return None
+        return local_chapter
 
 # === LOGGING ===
 def log_new_chapter(name, site, local, online):
