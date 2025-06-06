@@ -56,24 +56,38 @@ def extract_asura_latest_chapter(series_url):
     res = requests.get(series_url, headers=headers, timeout=10)
     if res.status_code != 200:
         raise Exception("URL not valid")
+
     soup = BeautifulSoup(res.text, "html.parser")
     links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
-    
-    chapter_nums = []
-    chapter_links = []
 
+    chapters = []
     for a in links:
         href = a.get("href", "")
-        if not href:
-            continue
         m = re.search(r'/chapter/(\d{1,4})', href)
-        if m:
-            chapter_num = int(m.group(1))
-            chapter_nums.append(chapter_num)
-            chapter_links.append((chapter_num, href))
+        if not m:
+            continue
+        num = int(m.group(1))
+        url = href if href.startswith("http") else f"https://asuracomic.net{href}"
+        chapters.append((num, url))
 
-    if not chapter_nums:
+    if not chapters:
         return None
+
+    # check descending order
+    chapters.sort(reverse=True)
+
+    for num, url in chapters:
+        try:
+            res = requests.get(url, headers=headers, timeout=10)
+            if res.status_code != 200:
+                continue
+            if "style_loginModal" in res.text or "Login" in res.text:
+                continue  # paywalled
+            return num
+        except:
+            continue
+
+    return None
 
     # Sort by chapter number, highest first
     chapter_links.sort(reverse=True)
