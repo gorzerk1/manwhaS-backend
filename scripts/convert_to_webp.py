@@ -1,21 +1,19 @@
 import os
 import sys
 import time
+import json
 from pathlib import Path
 from PIL import Image
 
 MAX_HEIGHT = 16383
 ROOT = Path("/home/ubuntu/backend/pictures")
-MANWHA = "demon-magic-emperor"
 LOG_DIR = Path("/home/ubuntu/backend/logs/convertToWebLog")
 TEMP_DIR = Path("/home/ubuntu/backend/temp")
+MANHWA_LIST_JSON = Path("/home/ubuntu/backend/json/manhwa_list.json")
 
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / f"log_{time.strftime('%-m-%-d-%Y-%H-%M')}.log"
-
-total_before_size = 0
-total_after_size = 0
 
 def log(msg):
     timestamp = time.strftime("[%H:%M:%S]")
@@ -67,9 +65,7 @@ def get_folder_size(path):
 def format_size(size_bytes):
     return f"{size_bytes / (1024 ** 3):.2f} GB"
 
-def process_chapter(chapter):
-    global total_before_size, total_after_size
-
+def process_chapter(chapter, summary):
     files = get_image_files(chapter)
     if all(f.suffix.lower() == ".webp" for f in files):
         log(f"⏭️ SKIPPED: {chapter.name} (all files are .webp)")
@@ -77,7 +73,7 @@ def process_chapter(chapter):
 
     log(f"\n📂 {chapter.name}")
     before_size = get_folder_size(chapter)
-    total_before_size += before_size
+    summary["before"] += before_size
 
     working_list = []
     for i, f in enumerate(files):
@@ -102,28 +98,44 @@ def process_chapter(chapter):
                 index += 1
 
     after_size = get_folder_size(chapter)
-    total_after_size += after_size
+    summary["after"] += after_size
 
     log(f"✅ Total .webp files: {len(final_outputs)}")
     log(f"📄 Files: {', '.join(final_outputs)}")
 
 def main():
-    base = ROOT / MANWHA
-    if not base.exists():
-        print(f"Folder not found: {base}")
+    if not MANHWA_LIST_JSON.exists():
+        print(f"File not found: {MANHWA_LIST_JSON}")
         sys.exit(1)
 
-    log(f"STARTING: {base}")
-    for chapter in sorted(base.glob("chapter-*")):
-        if chapter.is_dir():
-            process_chapter(chapter)
+    with open(MANHWA_LIST_JSON) as f:
+        manhwa_list = json.load(f)
 
-    total_saved = total_before_size - total_after_size
-    percent_total = (total_saved / total_before_size * 100) if total_before_size > 0 else 0
-    log("\n===== OVERALL SUMMARY =====")
-    log(f"📦 Total size before: {format_size(total_before_size)}")
-    log(f"📆 Total size after: {format_size(total_after_size)}")
-    log(f"📢 Total saved: {format_size(total_saved)} ({percent_total:.2f}%)")
+    summary_list = []
+
+    for manhwa_name in sorted(manhwa_list.keys()):
+        base = ROOT / manhwa_name
+        if not base.exists():
+            log(f"🚫 MISSING: {base}")
+            continue
+
+        log(f"\n=== STARTING: {manhwa_name} ===")
+        summary = {"name": manhwa_name, "before": 0, "after": 0}
+
+        for chapter in sorted(base.glob("chapter-*")):
+            if chapter.is_dir():
+                process_chapter(chapter, summary)
+
+        summary_list.append(summary)
+
+    log("\n====== FINAL SUMMARY ======")
+    for s in summary_list:
+        saved = s["before"] - s["after"]
+        percent = (saved / s["before"] * 100) if s["before"] > 0 else 0
+        log(f"\n{s['name']} :")
+        log(f"📦 Total size before: {format_size(s['before'])}")
+        log(f"📆 Total size after: {format_size(s['after'])}")
+        log(f"📢 Total saved: {format_size(saved)} ({percent:.2f}%)")
 
 if __name__ == "__main__":
     main()
