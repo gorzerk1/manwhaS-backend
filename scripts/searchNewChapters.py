@@ -25,7 +25,7 @@ def get_local_latest_chapter(folder_path):
             chapter_nums.append(int(match.group(1)))
     return max(chapter_nums) if chapter_nums else None
 
-# === ASURA URL FINDER ===
+# === ASURA URL FINDER (FIXED) ===
 def fetch_asura_series_url(name):
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
@@ -51,7 +51,7 @@ def fetch_asura_series_url(name):
     raise Exception("Series page not found on Asura")
 
 # === ASURA LATEST CHAPTER ===
-def extract_asura_latest_chapter(series_url, local_chapter=0):
+def extract_asura_latest_chapter(series_url):
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
 
@@ -83,13 +83,10 @@ def extract_asura_latest_chapter(series_url, local_chapter=0):
             m = re.search(r'/chapter/(\d{1,4})', a["href"])
             if not m:
                 continue
-            chapter_num = int(m.group(1))
-            if chapter_num < local_chapter:
-                continue
             href = a["href"]
             full_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
             if not is_paywalled(full_url):
-                valid_chapters.append(chapter_num)
+                valid_chapters.append(int(m.group(1)))
         except Exception as e:
             print(f"❌ Error parsing chapter link: {e}")
             continue
@@ -98,8 +95,9 @@ def extract_asura_latest_chapter(series_url, local_chapter=0):
     print(f"📦 Latest free chapter: {result}")
     return result
 
+
 # === ONLINE CHAPTER CHECK ===
-def check_online_chapter(name, data, local_chapter=0):
+def check_online_chapter(name, data):
     site = data.get("site")
     headers = {"User-Agent": "Mozilla/5.0"}
 
@@ -108,11 +106,11 @@ def check_online_chapter(name, data, local_chapter=0):
             url = data.get("url")
             try:
                 if url:
-                    return extract_asura_latest_chapter(url, local_chapter)
+                    return extract_asura_latest_chapter(url)
                 raise Exception("No valid URL")
             except:
                 new_url = fetch_asura_series_url(name)
-                chapter = extract_asura_latest_chapter(new_url, local_chapter)
+                chapter = extract_asura_latest_chapter(new_url)
                 data["url"] = new_url
                 global updated
                 updated = True
@@ -202,7 +200,7 @@ if __name__ == "__main__":
 
             for data in entries:
                 site = data.get("site", "unknown")
-                online_chapter = check_online_chapter(folder, data, local_chapter or 0)
+                online_chapter = check_online_chapter(folder, data)
 
                 if online_chapter is not None and (not local_chapter or online_chapter > local_chapter):
                     tag = "(prefered)" if not preferred_logged else "(skipped)"
