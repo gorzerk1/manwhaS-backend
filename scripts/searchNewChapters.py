@@ -66,18 +66,17 @@ def extract_asura_latest_chapter(series_url, local_chapter=None):
         m = re.search(r'/chapter/(\d{1,4})', a["href"])
         if m:
             chapter_num = int(m.group(1))
-            chapter_nums.append(chapter_num)
-            print(f"➡️ Found chapter link: {a['href']} → Chapter {chapter_num}")
+            if local_chapter is None or chapter_num > local_chapter:
+                chapter_nums.append(chapter_num)
+                print(f"➡️ Found NEW chapter link: {a['href']} → Chapter {chapter_num}")
 
     if not chapter_nums:
-        print("❌ No chapter numbers found on series page")
-        return None
+        print("❌ No new chapter numbers found above local")
+        return local_chapter if local_chapter is not None else None
 
     chapter_nums = sorted(set(chapter_nums), reverse=True)
 
     for chapter in chapter_nums:
-        if local_chapter is not None and chapter <= local_chapter:
-            break
         chapter_url = f"{series_url}/chapter/{chapter}"
         print(f"🔗 Checking latest chapter URL: {chapter_url}")
         try:
