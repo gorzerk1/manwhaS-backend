@@ -1,4 +1,7 @@
 {
+  "worlds-strongest-survivor": [
+    { "site": "asura"}
+  ],
   "absolute-regression": [
     { "site": "asura" },
     { "site": "kunmanga" }
@@ -46,8 +49,5 @@
   ],
   "kingdom": [
     { "site": "readkingdom" }
-  ],
-  "worlds-strongest-survivor": [
-    { "site": "asura"}
   ]
 }
