@@ -69,13 +69,17 @@ def format_size(size_bytes):
 
 def process_chapter(chapter):
     global total_before_size, total_after_size
+
+    files = get_image_files(chapter)
+    if all(f.suffix.lower() == ".webp" for f in files):
+        log(f"⏭️ SKIPPED: {chapter.name} (all files are .webp)")
+        return
+
     log(f"\n📂 {chapter.name}")
     before_size = get_folder_size(chapter)
     total_before_size += before_size
 
-    files = get_image_files(chapter)
     working_list = []
-
     for i, f in enumerate(files):
         temp_path = move_to_temp(f, i)
         ext = f.suffix.lower()
@@ -87,7 +91,6 @@ def process_chapter(chapter):
         if entry["type"] == ".webp":
             target = chapter / f"{index:03}.webp"
             entry["original"].rename(target)
-            log(f"MOVED: {entry['original'].name} → {target.name}")
             final_outputs.append(target.name)
             index += 1
         else:
