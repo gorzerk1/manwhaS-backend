@@ -70,9 +70,15 @@ def extract_asura_latest_chapter(series_url, local_chapter=0):
         try:
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
-            blocked = soup.select_one("div[data-state='open'][class*='z-50']") is not None
-            print(f"{'🔒 Paywalled' if blocked else '✅ Free'}: {url}")
-            return blocked
+
+            # Check if there are manhwa images
+            images = soup.select("div#readerarea img")
+            if not images:
+                print(f"🔒 No images found → paywalled: {url}")
+                return True
+
+            print(f"✅ Free: {url}")
+            return False
         except Exception as e:
             print(f"❌ Error checking paywall at {url}: {e}")
             return True
@@ -98,7 +104,6 @@ def extract_asura_latest_chapter(series_url, local_chapter=0):
     result = max(valid_chapters) if valid_chapters else None
     print(f"📦 Latest free chapter: {result}")
     return result
-
 
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
