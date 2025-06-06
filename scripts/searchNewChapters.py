@@ -51,59 +51,44 @@ def fetch_asura_series_url(name):
     raise Exception("Series page not found on Asura")
 
 # === ASURA LATEST CHAPTER ===
-def extract_asura_latest_chapter(series_url, local_chapter=0):
+def extract_asura_latest_chapter(series_url):
     headers = {"User-Agent": "Mozilla/5.0"}
-    base_url = "https://asuracomic.net"
+    res = requests.get(series_url, headers=headers, timeout=10)
+    if res.status_code != 200:
+        raise Exception("URL not valid")
+    soup = BeautifulSoup(res.text, "html.parser")
+    links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
+    
+    chapter_nums = []
+    chapter_links = []
 
-    try:
-        print(f"🔎 Fetching series page: {series_url}")
-        res = requests.get(series_url, headers=headers, timeout=10)
-        res.raise_for_status()
-        soup = BeautifulSoup(res.text, "html.parser")
-        links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
-    except Exception as e:
-        print(f"❌ Error fetching series page: {e}")
+    for a in links:
+        href = a.get("href", "")
+        if not href:
+            continue
+        m = re.search(r'/chapter/(\d{1,4})', href)
+        if m:
+            chapter_num = int(m.group(1))
+            chapter_nums.append(chapter_num)
+            chapter_links.append((chapter_num, href))
+
+    if not chapter_nums:
         return None
 
-    def is_paywalled(url):
-        print(f"⏳ Checking chapter: {url}")
+    # Sort by chapter number, highest first
+    chapter_links.sort(reverse=True)
+
+    for chapter_num, chapter_href in chapter_links:
+        chapter_url = chapter_href if chapter_href.startswith("http") else f"https://asuracomic.net{chapter_href}"
         try:
-            res = requests.get(url, headers=headers, timeout=10)
-            soup = BeautifulSoup(res.text, "html.parser")
-
-            # Check if there are manhwa images
-            images = soup.select("div#readerarea img")
-            if not images:
-                print(f"🔒 No images found → paywalled: {url}")
-                return True
-
-            print(f"✅ Free: {url}")
-            return False
-        except Exception as e:
-            print(f"❌ Error checking paywall at {url}: {e}")
-            return True
-
-    valid_chapters = []
-    for a in links:
-        try:
-            m = re.search(r'/chapter/(\d{1,4})', a["href"])
-            if not m:
-                continue
-            chapter_num = int(m.group(1))
-            if chapter_num < local_chapter:
-                continue  # skip old chapters
-
-            href = a["href"]
-            full_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
-            if not is_paywalled(full_url):
-                valid_chapters.append(chapter_num)
-        except Exception as e:
-            print(f"❌ Error parsing chapter link: {e}")
+            chapter_res = requests.get(chapter_url, headers=headers, timeout=10)
+            if "style_loginModal" in chapter_res.text or "Login" in chapter_res.text:
+                continue  # skip paywalled
+            return chapter_num
+        except:
             continue
 
-    result = max(valid_chapters) if valid_chapters else None
-    print(f"📦 Latest free chapter: {result}")
-    return result
+    return None
 
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
@@ -189,7 +174,7 @@ if __name__ == "__main__":
     printed_header = False
     updated = False
 
-    for folder in manhwa_list:
+    for folder in sorted(manhwa_list.keys()):
         folder_path = os.path.join(pictures_path, folder)
 
         if not os.path.exists(folder_path):
