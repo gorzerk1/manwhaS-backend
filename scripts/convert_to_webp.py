@@ -6,7 +6,7 @@ from PIL import Image
 
 MAX_HEIGHT = 16383
 ROOT = Path("/home/ubuntu/backend/pictures")
-MANWHA = "mookhyang-the-origin"
+MANWHA = "demon-magic-emperor"
 LOG_DIR = Path("/home/ubuntu/backend/logs/convertToWebLog")
 TEMP_DIR = Path("/home/ubuntu/backend/temp")
 
