@@ -56,53 +56,10 @@ def extract_asura_latest_chapter(series_url):
     res = requests.get(series_url, headers=headers, timeout=10)
     if res.status_code != 200:
         raise Exception("URL not valid")
-
     soup = BeautifulSoup(res.text, "html.parser")
     links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
-
-    chapters = []
-    for a in links:
-        href = a.get("href", "")
-        m = re.search(r'/chapter/(\d{1,4})', href)
-        if not m:
-            continue
-        num = int(m.group(1))
-        url = href if href.startswith("http") else f"https://asuracomic.net{href}"
-        chapters.append((num, url))
-
-    if not chapters:
-        return None
-
-    # check descending order
-    chapters.sort(reverse=True)
-
-    for num, url in chapters:
-        try:
-            res = requests.get(url, headers=headers, timeout=10)
-            if res.status_code != 200:
-                continue
-            if "style_loginModal" in res.text or "Login" in res.text:
-                continue  # paywalled
-            return num
-        except:
-            continue
-
-    return None
-
-    # Sort by chapter number, highest first
-    chapter_links.sort(reverse=True)
-
-    for chapter_num, chapter_href in chapter_links:
-        chapter_url = chapter_href if chapter_href.startswith("http") else f"https://asuracomic.net{chapter_href}"
-        try:
-            chapter_res = requests.get(chapter_url, headers=headers, timeout=10)
-            if "style_loginModal" in chapter_res.text or "Login" in chapter_res.text:
-                continue  # skip paywalled
-            return chapter_num
-        except:
-            continue
-
-    return None
+    chapter_nums = [int(m.group(1)) for a in links if (m := re.search(r'/chapter/(\d{1,4})', a["href"]))]
+    return max(chapter_nums) if chapter_nums else None
 
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
