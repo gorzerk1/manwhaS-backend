@@ -71,7 +71,7 @@ def extract_asura_latest_chapter(series_url):
             return soup.select_one("div[data-state='open'][class*='z-50']") is not None
         except Exception as e:
             print(f"❌ Error checking paywall at {url}: {e}")
-            return True  # safer to assume paywalled if error
+            return True  # assume paywalled on failure
 
     valid_chapters = []
     for a in links:
@@ -79,9 +79,8 @@ def extract_asura_latest_chapter(series_url):
             m = re.search(r'/chapter/(\d{1,4})', a["href"])
             if not m:
                 continue
-            full_url = a["href"]
-            if not full_url.startswith("http"):
-                full_url = base_url + full_url
+            href = a["href"]
+            full_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
             if not is_paywalled(full_url):
                 valid_chapters.append(int(m.group(1)))
         except Exception as e:
