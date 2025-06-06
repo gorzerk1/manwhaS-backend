@@ -53,13 +53,56 @@ def fetch_asura_series_url(name):
 # === ASURA LATEST CHAPTER ===
 def extract_asura_latest_chapter(series_url):
     headers = {"User-Agent": "Mozilla/5.0"}
+    base_url = "https://asuracomic.net"
+
     res = requests.get(series_url, headers=headers, timeout=10)
     if res.status_code != 200:
         raise Exception("URL not valid")
+
     soup = BeautifulSoup(res.text, "html.parser")
     links = soup.select("div[class*='pl-4'][class*='border'] a[href*='/chapter/']")
     chapter_nums = [int(m.group(1)) for a in links if (m := re.search(r'/chapter/(\d{1,4})', a["href"]))]
-    return max(chapter_nums) if chapter_nums else None
+    latest_chapter = max(chapter_nums) if chapter_nums else None
+
+    # Check if latest chapter is paywalled from homepage
+    if latest_chapter:
+        slug_match = re.search(r'/series/([^/]+)', series_url)
+        series_slug = slug_match.group(1) if slug_match else ""
+        homepage_url = base_url
+        homepage_res = requests.get(homepage_url, headers=headers, timeout=10)
+        homepage_soup = BeautifulSoup(homepage_res.text, "html.parser")
+        series_blocks = homepage_soup.select("div.w-full.p-1.pt-1.pb-3.border-b-[1px]")
+
+        for block in series_blocks:
+            series_link_tag = block.select_one("span.text-[15px] a[href]")
+            if not series_link_tag:
+                continue
+            series_href = series_link_tag["href"]
+            if series_slug not in series_href:
+                continue
+
+            chapter_entries = block.select("div.flex.flex-row.justify-between.rounded-sm")
+            for entry in chapter_entries:
+                chapter_link_tag = entry.select_one("a[href*='/chapter/']")
+                if not chapter_link_tag:
+                    continue
+                chapter_href = chapter_link_tag["href"]
+                chapter_match = re.search(r'/chapter/(\d+)', chapter_href)
+                if not chapter_match:
+                    continue
+                chapter_num = int(chapter_match.group(1))
+                if chapter_num != latest_chapter:
+                    continue
+
+                svg_icon = entry.select_one("svg.lucide.lucide-timer")
+                if svg_icon:
+                    print(f"🔒 Latest chapter {latest_chapter} is paywalled.")
+                    return None
+                else:
+                    print(f"✅ Latest chapter {latest_chapter} is free.")
+                    return latest_chapter
+
+    return None
 
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
