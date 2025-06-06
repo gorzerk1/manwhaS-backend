@@ -9,7 +9,7 @@ MAX_HEIGHT = 16383
 ROOT = Path("/home/ubuntu/backend/pictures")
 LOG_DIR = Path("/home/ubuntu/backend/logs/convertToWebLog")
 TEMP_DIR = Path("/home/ubuntu/backend/temp")
-MANHWA_LIST_JSON = Path("/home/ubuntu/server-backend/json/manhwa_list.json")
+MANHWA_LIST_JSON = Path("/home/ubuntu/backend/json/manhwa_list.json")
 
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -122,7 +122,8 @@ def main():
         log(f"\n=== STARTING: {manhwa_name} ===")
         summary = {"name": manhwa_name, "before": 0, "after": 0}
 
-        for chapter in sorted(base.glob("chapter-*")):
+        # fixed: numeric sort for chapter folders
+        for chapter in sorted(base.glob("chapter-*"), key=lambda x: int(x.name.split("-")[-1])):
             if chapter.is_dir():
                 process_chapter(chapter, summary)
 
