@@ -56,6 +56,7 @@ def extract_asura_latest_chapter(series_url):
     base_url = "https://asuracomic.net"
 
     try:
+        print(f"🔎 Fetching series page: {series_url}")
         res = requests.get(series_url, headers=headers, timeout=10)
         res.raise_for_status()
         soup = BeautifulSoup(res.text, "html.parser")
@@ -65,13 +66,16 @@ def extract_asura_latest_chapter(series_url):
         return None
 
     def is_paywalled(url):
+        print(f"⏳ Checking chapter: {url}")
         try:
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
-            return soup.select_one("div[data-state='open'][class*='z-50']") is not None
+            blocked = soup.select_one("div[data-state='open'][class*='z-50']") is not None
+            print(f"{'🔒 Paywalled' if blocked else '✅ Free'}: {url}")
+            return blocked
         except Exception as e:
             print(f"❌ Error checking paywall at {url}: {e}")
-            return True  # assume paywalled on failure
+            return True
 
     valid_chapters = []
     for a in links:
@@ -87,7 +91,9 @@ def extract_asura_latest_chapter(series_url):
             print(f"❌ Error parsing chapter link: {e}")
             continue
 
-    return max(valid_chapters) if valid_chapters else None
+    result = max(valid_chapters) if valid_chapters else None
+    print(f"📦 Latest free chapter: {result}")
+    return result
 
 
 # === ONLINE CHAPTER CHECK ===
