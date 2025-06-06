@@ -3,13 +3,13 @@ import sys
 import time
 import json
 from pathlib import Path
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 MAX_HEIGHT = 16383
 ROOT = Path("/home/ubuntu/backend/pictures")
 LOG_DIR = Path("/home/ubuntu/backend/logs/convertToWebLog")
 TEMP_DIR = Path("/home/ubuntu/backend/temp")
-MANHWA_LIST_JSON = Path("/home/ubuntu/server-backend/json/manhwa_list.json")
+MANHWA_LIST_JSON = Path("/home/ubuntu/backend/json/manhwa_list.json")
 
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -32,8 +32,16 @@ def move_to_temp(file, index):
     file.rename(new_path)
     return new_path
 
-def convert_image(image_path, index_start):
-    img = Image.open(image_path).convert("RGB")
+def convert_image(image_path, index_start, chapter_name):
+    try:
+        img = Image.open(image_path).convert("RGB")
+    except UnidentifiedImageError:
+        log(f"❌ CORRUPT: {chapter_name} > {image_path.name}")
+        return []
+    except Exception as e:
+        log(f"❌ ERROR: {chapter_name} > {image_path.name} ({e})")
+        return []
+
     width, height = img.size
     count = 0
     outputs = []
@@ -90,7 +98,7 @@ def process_chapter(chapter, summary):
             final_outputs.append(target.name)
             index += 1
         else:
-            outputs = convert_image(entry["original"], index)
+            outputs = convert_image(entry["original"], index, chapter.name)
             for out in outputs:
                 target = chapter / f"{index:03}.webp"
                 out.rename(target)
@@ -122,7 +130,6 @@ def main():
         log(f"\n=== STARTING: {manhwa_name} ===")
         summary = {"name": manhwa_name, "before": 0, "after": 0}
 
-        # fixed: numeric sort for chapter folders
         for chapter in sorted(base.glob("chapter-*"), key=lambda x: int(x.name.split("-")[-1])):
             if chapter.is_dir():
                 process_chapter(chapter, summary)
