@@ -1,42 +1,46 @@
-import json
 import os
 import subprocess
+import json
+from dotenv import load_dotenv
 
-# Path to JSON file
-json_path = os.path.expanduser("~/server-backend/json/manhwa_list.json")
+# === Load GitHub Token from .env ===
+load_dotenv(dotenv_path=os.path.expanduser("~/importantFold/.env"))
+TOKEN = os.getenv("GITHUB_TOKEN")
+if not TOKEN:
+    raise Exception("❌ GITHUB_TOKEN missing in .env")
 
-# Load latest Git version
+# === Paths ===
+REPO_PATH = os.path.expanduser("~/server-backend")
+JSON_FILE = os.path.join(REPO_PATH, "json", "manhwa_list.json")
+REMOTE_URL = f"https://{TOKEN}@github.com/gorzerk1/manwhaS-backend.git"
+
+# === Pull latest from GitHub ===
 def git_pull():
-    subprocess.run(["git", "pull"], cwd=os.path.expanduser("~/server-backend"), check=True)
+    subprocess.run(["git", "pull"], cwd=REPO_PATH, check=True)
 
-# Load old data
-def load_existing():
-    with open(json_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+# === Set remote with token ===
+def set_git_remote():
+    subprocess.run(["git", "remote", "set-url", "origin", REMOTE_URL], cwd=REPO_PATH, check=True)
 
-# Save + push if changed
-def save_if_changed(new_data):
-    old_data = load_existing()
+# === Check if file changed ===
+def is_file_changed():
+    result = subprocess.run(["git", "status", "--porcelain", "json/manhwa_list.json"], cwd=REPO_PATH, stdout=subprocess.PIPE, text=True)
+    return bool(result.stdout.strip())
 
-    if old_data == new_data:
-        print("⏭ No changes, not pushing.")
-        return
-
-    print("✅ Changes detected. Updating file...")
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(new_data, f, indent=2)
-
-    # Push
-    subprocess.run(["git", "add", "json/manhwa_list.json"], cwd=os.path.expanduser("~/server-backend"), check=True)
-    subprocess.run(["git", "commit", "-m", "update manhwa_list with new urls"], cwd=os.path.expanduser("~/server-backend"), check=True)
-    subprocess.run(["git", "push"], cwd=os.path.expanduser("~/server-backend"), check=True)
+# === Commit and Push ===
+def git_push():
+    subprocess.run(["git", "add", "json/manhwa_list.json"], cwd=REPO_PATH, check=True)
+    subprocess.run(["git", "commit", "-m", "update manhwa_list"], cwd=REPO_PATH, check=True)
+    subprocess.run(["git", "push"], cwd=REPO_PATH, check=True)
     print("🚀 Pushed to GitHub.")
 
-# === USAGE ===
-git_pull()
+# === Main ===
+if __name__ == "__main__":
+    git_pull()
+    set_git_remote()
 
-# `manhwa_list` is your final scraped result at the end
-# Replace this with your actual dict
-from your_scraper import manhwa_list
-
-save_if_changed(manhwa_list)
+    if is_file_changed():
+        print("✅ manhwa_list.json changed. Pushing...")
+        git_push()
+    else:
+        print("⏭ No changes. Nothing to push.")
