@@ -1,50 +1,96 @@
 {
   "worlds-strongest-survivor": [
-    { "site": "asura"}
+    {
+      "site": "asura"
+    }
   ],
   "absolute-regression": [
-    { "site": "asura" },
-    { "site": "kunmanga" }
+    {
+      "site": "asura"
+    },
+    {
+      "site": "kunmanga"
+    }
   ],
   "nano-machine": [
-    { "site": "asura" }
+    {
+      "site": "asura"
+    }
   ],
   "myst-might-mayhem": [
-    { "site": "asura" },
-    { "site": "yaksha" },
-    { "site": "manhwaclan" },
-    { "site": "kunmanga" }
+    {
+      "site": "asura"
+    },
+    {
+      "site": "yaksha"
+    },
+    {
+      "site": "manhwaclan"
+    },
+    {
+      "site": "kunmanga"
+    }
   ],
   "the-return-of-the-crazy-demon": [
-    { "site": "asura" },
-    { "site": "yaksha" }
+    {
+      "site": "asura"
+    },
+    {
+      "site": "yaksha"
+    }
   ],
   "surviving-as-a-genius-on-borrowed-time": [
-    { "site": "asura" },
-    { "site": "manhwaclan" }
+    {
+      "site": "asura"
+    },
+    {
+      "site": "manhwaclan"
+    }
   ],
   "swordmasters-youngest-son": [
-    { "site": "asura" }
+    {
+      "site": "asura"
+    }
   ],
   "the-priest-of-corruption": [
-    { "site": "asura" }
+    {
+      "site": "asura"
+    }
   ],
   "reincarnation-of-the-suicidal-battle-god": [
-    { "site": "asura" }
+    {
+      "site": "asura"
+    }
   ],
   "sword-fanatic-wanders-through-the-night": [
-    { "site": "asura" }
+    {
+      "site": "asura"
+    }
   ],
   "reaper-of-the-drifting-moon": [
-    { "site": "asura" }
+    {
+      "site": "asura"
+    }
   ],
   "legend-of-asura-the-venom-dragon": [
-    { "site": "asura" }
+    {
+      "site": "asura"
+    }
   ],
   "demon-magic-emperor": [
-    { "site": "manhuaplus" }
+    {
+      "site": "manhuaplus"
+    }
   ],
   "kingdom": [
-    { "site": "readkingdom" }
+    {
+      "site": "readkingdom"
+    }
+  ],
+  "example_slug": [
+    {
+      "site": "asura",
+      "url": "https://asura.com/manga/example"
+    }
   ]
 }
