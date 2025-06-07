@@ -1,50 +1,101 @@
 {
   "worlds-strongest-survivor": [
-    { "site": "asura"}
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/worlds-strongest-survivor-9b2ea089"
+    }
   ],
   "absolute-regression": [
-    { "site": "asura" },
-    { "site": "kunmanga" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/absolute-regression-567325df"
+    },
+    {
+      "site": "kunmanga"
+    }
   ],
   "nano-machine": [
-    { "site": "asura" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/nano-machine-ad4a7363"
+    }
   ],
   "myst-might-mayhem": [
-    { "site": "asura" },
-    { "site": "yaksha" },
-    { "site": "manhwaclan" },
-    { "site": "kunmanga" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/myst-might-mayhem-aa8c2e54"
+    },
+    {
+      "site": "yaksha"
+    },
+    {
+      "site": "manhwaclan"
+    },
+    {
+      "site": "kunmanga"
+    }
   ],
   "the-return-of-the-crazy-demon": [
-    { "site": "asura" },
-    { "site": "yaksha" }
+    {
+      "site": "asura"
+    },
+    {
+      "site": "yaksha"
+    }
   ],
   "surviving-as-a-genius-on-borrowed-time": [
-    { "site": "asura" },
-    { "site": "manhwaclan" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/surviving-as-a-genius-on-borrowed-time-a7074f25"
+    },
+    {
+      "site": "manhwaclan"
+    }
   ],
   "swordmasters-youngest-son": [
-    { "site": "asura" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/swordmasters-youngest-son-5190f4bc"
+    }
   ],
   "the-priest-of-corruption": [
-    { "site": "asura" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/the-priest-of-corruption-8835bbaa"
+    }
   ],
   "reincarnation-of-the-suicidal-battle-god": [
-    { "site": "asura" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/reincarnation-of-the-suicidal-battle-god-94de61bd"
+    }
   ],
   "sword-fanatic-wanders-through-the-night": [
-    { "site": "asura" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/sword-fanatic-wanders-through-the-night-12e84f14"
+    }
   ],
   "reaper-of-the-drifting-moon": [
-    { "site": "asura" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/reaper-of-the-drifting-moon-c3d9a7a2"
+    }
   ],
   "legend-of-asura-the-venom-dragon": [
-    { "site": "asura" }
+    {
+      "site": "asura",
+      "url": "https://asuracomic.net/series/legend-of-asura-the-venom-dragon-047d9636"
+    }
   ],
   "demon-magic-emperor": [
-    { "site": "manhuaplus" }
+    {
+      "site": "manhuaplus"
+    }
   ],
   "kingdom": [
-    { "site": "readkingdom" }
+    {
+      "site": "readkingdom"
+    }
   ]
 }
