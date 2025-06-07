@@ -57,23 +57,30 @@ for slug, sources in manhwa_list.items():
         else:
             print(f"↪️ Using existing image: {image_name}")
 
-        # other fields
+        # synopsis
         syn_tag = soup.select_one("span.font-medium.text-sm.text-\\[\\#A2A2A2\\]")
         synopsis = syn_tag.text.strip() if syn_tag else ""
 
-        genre_tags = soup.select("span.text-\\[\\#A2A2A2\\].font-normal")
-        genres = list({g.text.strip() for g in genre_tags})
+        # genres from buttons
+        genre_block = soup.select_one("div.flex.flex-row.flex-wrap.gap-3")
+        genres = [btn.text.strip() for btn in genre_block.find_all("button")] if genre_block else []
 
+        # keywords from span
+        keyword_tags = soup.select("span.text-\\[\\#A2A2A2\\].font-normal")
+        keywords = list({k.text.strip() for k in keyword_tags})
+
+        # artist and author
         artist = get_detail_from_block(soup, "Artist")
         author = get_detail_from_block(soup, "Author")
 
-        # build details
+        # save
         manwha_details[slug] = {
             "imagelogo": image_name,
             "synopsis": synopsis,
             "artist": artist,
             "author": author,
-            "genres": genres
+            "genres": genres,
+            "keywords": keywords
         }
 
     except Exception as e:
