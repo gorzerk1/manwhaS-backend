@@ -53,7 +53,10 @@ def try_download(chapter_url):
         driver.get(chapter_url)
         sleep(2)
         img_elements = driver.find_elements(By.CSS_SELECTOR, "div.text-center img")
-        return [img.get_attribute("src") for img in img_elements if img.get_attribute("src")]
+        valid_exts = [".jpg", ".jpeg", ".png", ".webp"]
+        img_urls = [img.get_attribute("src") for img in img_elements if img.get_attribute("src")]
+        img_urls = [url for url in img_urls if any(url.lower().endswith(ext) for ext in valid_exts)]
+        return img_urls
     except:
         return []
 
@@ -85,7 +88,7 @@ while True:
     chapter_dir = os.path.join(pictures_base, f"chapter-{chapter}")
     print(f"\n📚 Chapter {chapter}")
 
-    print("🌀 Trying padded URL...")
+    print("🔀 Trying padded URL...")
     padded_url = f"{base_url}/chapter/{chapter_slug}-{chapter:03d}/"
     img_urls = try_download(padded_url)
 
@@ -97,6 +100,11 @@ while True:
     if len(img_urls) <= 1:
         print("⚠️ No valid images for padded or fallback. Likely last chapter.")
         break
+
+    if len(img_urls) <= 4:
+        print(f"⚠️ Too few images ({len(img_urls)}). Skipping.")
+        chapter += 1
+        continue
 
     print(f"📸 Found {len(img_urls)} images")
     os.makedirs(chapter_dir, exist_ok=True)
