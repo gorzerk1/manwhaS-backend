@@ -64,6 +64,7 @@ def extract_asura_latest_chapter(series_url):
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
     site = data.get("site")
+    site_name = data.get("name", name)
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
@@ -82,28 +83,28 @@ def check_online_chapter(name, data):
                 return chapter
 
         elif site == "yaksha":
-            url = f"https://yakshascans.com/manga/{name}"
+            url = f"https://yakshascans.com/manga/{site_name}"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
             return max([int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d{1,4})', link.get("href", "")))], default=None)
 
         elif site == "kunmanga":
-            url = f"https://kunmanga.com/manga/{name}/"
+            url = f"https://kunmanga.com/manga/{site_name}/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
             return max([int(m.group(1)) for link in links if (m := re.search(r'chapter-(\d{1,4})', link.get("href", "")))], default=None)
 
         elif site == "manhwaclan":
-            url = f"https://manhwaclan.com/manga/{name}/"
+            url = f"https://manhwaclan.com/manga/{site_name}/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.select("div.listing-chapters_wrap a[href*='/chapter-']")
             return max([int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d+)', link.get("href", "")))], default=None)
 
         elif site == "manhuaplus":
-            url = f"https://manhuaplus.org/manga/{name}/"
+            url = f"https://manhuaplus.org/manga/{site_name}/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             items = soup.select("ul#myUL li[data]")
