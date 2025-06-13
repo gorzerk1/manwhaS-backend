@@ -125,19 +125,20 @@ for slug, sources in manhwa_data.items():
         downloaded = False
         for source in supported_sources:
             site = source["site"]
+            site_slug = source.get("name", slug)
             config = SITE_CONFIG[site]
 
-            print(f"\n🔎 Trying {site}: {slug} Chapter {new_chapter}")
+            print(f"\n🔎 Trying {site}: {site_slug} Chapter {new_chapter}")
 
             if config.get("custom"):
-                success = download_kunmanga_chapter(slug, new_chapter, local_path)
+                success = download_kunmanga_chapter(site_slug, new_chapter, local_path)
                 if success:
                     downloaded = True
                     break
                 continue
 
             try:
-                url = config["url"].format(slug=slug, chapter=new_chapter)
+                url = config["url"].format(slug=site_slug, chapter=new_chapter)
                 driver.get(url)
                 sleep(config["sleep"])
 
@@ -145,7 +146,7 @@ for slug, sources in manhwa_data.items():
                 img_urls = [img.get_attribute(config["attr"]) for img in imgs if img.get_attribute(config["attr"])]
 
                 if len(img_urls) <= 1:
-                    print(f"✅ No real chapter content for {slug} chapter {new_chapter}")
+                    print(f"✅ No real chapter content for {site_slug} chapter {new_chapter}")
                     continue
 
                 chapter_dir = os.path.join(local_path, f"chapter-{new_chapter}")
@@ -166,7 +167,7 @@ for slug, sources in manhwa_data.items():
                 break
 
             except Exception as e:
-                print(f"❌ Error checking {site} for {slug}: {e}")
+                print(f"❌ Error checking {site} for {site_slug}: {e}")
                 continue
 
         if not downloaded:
