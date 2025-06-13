@@ -29,12 +29,10 @@
       "site": "yaksha"
     },
     {
-      "site": "manhwaclan",
-      "name": "return-of-the-mad-demon"
+      "site": "manhwaclan"
     },
     {
-      "site": "kunmanga",
-      "name": "return-of-the-mad-demon"
+      "site": "kunmanga"
     }
   ],
   "the-return-of-the-crazy-demon": [
@@ -45,9 +43,13 @@
     {
       "site": "yaksha"
     },
-    {"site": "manhwaclan"},
     {
-      "site": "kunmanga"
+      "site": "manhwaclan",
+      "name": "return-of-the-mad-demon"
+    },
+    {
+      "site": "kunmanga",
+      "name": "return-of-the-mad-demon"
     }
   ],
   "surviving-as-a-genius-on-borrowed-time": [
