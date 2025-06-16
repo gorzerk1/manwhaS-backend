@@ -40,6 +40,13 @@ for slug, sources in manhwa_list.items():
 
         current = manwha_details.get(slug, {})
 
+        # === Ensure default fields
+        current.setdefault("synopsis", "")
+        current.setdefault("artist", "")
+        current.setdefault("author", "")
+        current.setdefault("keywords", [])
+        current.setdefault("genres", [])
+
         # === IMAGE
         image_name = f"{slug}.webp"
         image_path = os.path.join(image_dir, image_name)
@@ -59,8 +66,14 @@ for slug, sources in manhwa_list.items():
         else:
             print(f"↪️ Image already exists: {image_name}")
 
+        # === SYNOPSIS
+        if not current["synopsis"].strip():
+            syn_tag = soup.select_one("div.summary__content p")
+            if syn_tag:
+                current["synopsis"] = syn_tag.text.strip()
+
         # === KEYWORDS (Alternative)
-        if "keywords" not in current or not current["keywords"]:
+        if not current["keywords"]:
             for block in soup.select("div.post-content_item"):
                 heading = block.select_one("div.summary-heading")
                 if heading and heading.text.strip() == "Alternative":
@@ -71,13 +84,25 @@ for slug, sources in manhwa_list.items():
                     break
 
         # === GENRES
-        if "genres" not in current or not current["genres"]:
+        if not current["genres"]:
             for block in soup.select("div.post-content_item"):
                 heading = block.select_one("div.summary-heading")
                 if heading and heading.text.strip() == "Genre(s)":
                     genre_links = block.select("div.summary-content div.genres-content a")
                     current["genres"] = [a.text.strip() for a in genre_links if a.text.strip()]
                     break
+
+        # === AUTHOR / ARTIST
+        for block in soup.select("div.post-content_item"):
+            heading = block.select_one("div.summary-heading")
+            label = heading.text.strip() if heading else ""
+            content = block.select_one("div.summary-content")
+            value = content.text.strip() if content else ""
+
+            if label == "Author(s)" and (not current["author"] or current["author"] == "--"):
+                current["author"] = value
+            elif label == "Artist(s)" and (not current["artist"] or current["artist"] == "--"):
+                current["artist"] = value
 
         # === Save back
         manwha_details[slug] = current
