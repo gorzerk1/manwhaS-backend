@@ -1,0 +1,86 @@
+import os
+import json
+import requests
+from bs4 import BeautifulSoup
+
+# === PATHS ===
+json_path = os.path.expanduser("~/server-backend/json/manhwa_list.json")
+details_path = os.path.expanduser("~/server-backend/json/manwha_details.json")
+image_dir = os.path.expanduser("~/backend/manwhaTitle")
+
+# === LOAD ===
+with open(json_path, "r", encoding="utf-8") as f:
+    manhwa_list = json.load(f)
+
+if os.path.exists(details_path):
+    with open(details_path, "r", encoding="utf-8") as f:
+        manwha_details = json.load(f)
+else:
+    manwha_details = {}
+
+headers = {"User-Agent": "Mozilla/5.0"}
+session = requests.Session()
+
+# === SCRAPE ===
+for slug, sources in manhwa_list.items():
+    site = next((s for s in sources if s.get("site") == "manhwaclan" and "url" in s), None)
+    if not site:
+        continue
+
+    url = site["url"]
+    print(f"🔎 Checking {slug} (manhwaclan)")
+
+    try:
+        res = session.get(url, headers=headers, timeout=30)
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        current = manwha_details.get(slug, {})
+
+        # === IMAGE
+        image_name = f"{slug}.webp"
+        image_path = os.path.join(image_dir, image_name)
+        img_tag = soup.select_one("div.summary_image a img")
+        img_src = img_tag["src"].strip() if img_tag else ""
+
+        if "imagelogo" not in current or not os.path.exists(image_path):
+            if img_src:
+                try:
+                    img_data = session.get(img_src, headers=headers, timeout=30).content
+                    with open(image_path, "wb") as img_file:
+                        img_file.write(img_data)
+                    print(f"✅ Image saved: {image_name}")
+                    current["imagelogo"] = image_name
+                except Exception as img_err:
+                    print(f"⚠️ Failed to download image for {slug}: {img_err}")
+        else:
+            print(f"↪️ Image already exists: {image_name}")
+
+        # === KEYWORDS (Alternative)
+        if "keywords" not in current or not current["keywords"]:
+            for block in soup.select("div.post-content_item"):
+                heading = block.select_one("div.summary-heading")
+                if heading and heading.text.strip() == "Alternative":
+                    content = block.select_one("div.summary-content")
+                    if content:
+                        raw_text = content.text.strip()
+                        current["keywords"] = [kw.strip() for kw in raw_text.split(",") if kw.strip()]
+                    break
+
+        # === GENRES
+        if "genres" not in current or not current["genres"]:
+            for block in soup.select("div.post-content_item"):
+                heading = block.select_one("div.summary-heading")
+                if heading and heading.text.strip() == "Genre(s)":
+                    genre_links = block.select("div.summary-content div.genres-content a")
+                    current["genres"] = [a.text.strip() for a in genre_links if a.text.strip()]
+                    break
+
+        # === Save back
+        manwha_details[slug] = current
+
+    except Exception as e:
+        print(f"❌ Error processing {slug}: {e}")
+
+# === SAVE
+with open(details_path, "w", encoding="utf-8") as f:
+    json.dump(manwha_details, f, indent=2)
