@@ -21,17 +21,17 @@ else:
 headers = {"User-Agent": "Mozilla/5.0"}
 session = requests.Session()
 
-found_any = False  # track if anything processed
+found_any = False
 
 # === SCRAPE ===
 for slug, sources in manhwa_list.items():
-    site = next((s for s in sources if s.get("site") == "manhwaclan" and "url" in s), None)
-    if not site:
+    site_entry = next((s for s in sources if s.get("site") == "manhwaclan"), None)
+    if not site_entry:
         print(f"↪️ Skipping {slug}: no manhwaclan source")
         continue
 
     found_any = True
-    url = site["url"]
+    url = f"https://manhwaclan.com/manga/{slug.replace('_', '-')}/"
     print(f"🔎 Checking {slug} (manhwaclan)")
 
     try:
