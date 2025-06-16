@@ -16,7 +16,23 @@ log_dir = os.path.expanduser("~/backend/logs/searchNewChapters")
 with open(json_path, "r") as f:
     manhwa_list = json.load(f)
 
-# === LOCAL CHAPTER ===
+# === LOCAL CHAPTER FOR ASURA (backtrace source.txt) ===
+def get_asura_latest_chapter(folder_path):
+    chapters = sorted([
+        int(m.group(1)) for m in
+        (re.match(r"chapter-(\d+)", d) for d in os.listdir(folder_path))
+        if m
+    ], reverse=True)
+
+    for chap_num in chapters:
+        source_file = os.path.join(folder_path, f"chapter-{chap_num}", "source.txt")
+        if os.path.exists(source_file):
+            with open(source_file) as f:
+                if "Downloaded from AsuraScans" in f.read():
+                    return chap_num
+    return None
+
+# === LOCAL CHAPTER (default for other sources) ===
 def get_local_latest_chapter(folder_path):
     chapter_nums = []
     for name in os.listdir(folder_path):
@@ -158,14 +174,19 @@ if __name__ == "__main__":
                 print("_" * 86)
                 printed_header = True
 
-            local_chapter = get_local_latest_chapter(folder_path)
             entries = manhwa_list[folder]
-
             preferred_logged = False
             preferred_online = None
 
             for data in entries:
                 site = data.get("site", "unknown")
+
+                # Get local chapter
+                if site == "asura":
+                    local_chapter = get_asura_latest_chapter(folder_path)
+                else:
+                    local_chapter = get_local_latest_chapter(folder_path)
+
                 online_chapter = check_online_chapter(folder, data)
 
                 if online_chapter is not None and (not local_chapter or online_chapter > local_chapter):
