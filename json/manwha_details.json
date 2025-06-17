@@ -34,16 +34,16 @@
       "Wuxia"
     ],
     "keywords": [
-      "read Legend of Asura – The Venom Dragon",
-      "Legend of Asura – The Venom Dragon english",
-      "Legend of Asura – The Venom Dragon eng",
-      "download Legend of Asura – The Venom Dragon eng",
-      "Legend of Asura – The Venom Dragon online"
+      "read Legend of Asura \u2013 The Venom Dragon",
+      "Legend of Asura \u2013 The Venom Dragon english",
+      "Legend of Asura \u2013 The Venom Dragon eng",
+      "download Legend of Asura \u2013 The Venom Dragon eng",
+      "Legend of Asura \u2013 The Venom Dragon online"
     ]
   },
   "myst-might-mayhem": {
     "imagelogo": "myst-might-mayhem.webp",
-    "synopsis": "Jeong, known as the Slaughtering Scythe Demon, seeks revenge for his grandfather's death, training in martial arts to confront the murderer.",
+    "synopsis": "",
     "artist": "Redice Studio / Kim Taehyung",
     "author": "Hanjoong Wolya / Mad Bird",
     "genres": [
@@ -125,7 +125,7 @@
   },
   "surviving-as-a-genius-on-borrowed-time": {
     "imagelogo": "surviving-as-a-genius-on-borrowed-time.webp",
-    "synopsis": "Jeong Yeon-shin, born with a terminal condition, uses his unparalleled intelligence and strategic prowess to navigate a world of martial artists, elves, and dwarves.",
+    "synopsis": "",
     "artist": "JP",
     "author": "--",
     "genres": [
@@ -177,11 +177,11 @@
       "Shounen"
     ],
     "keywords": [
-      "read Swordmaster’s Youngest Son",
-      "Swordmaster’s Youngest Son english",
-      "Swordmaster’s Youngest Son eng",
-      "download Swordmaster’s Youngest Son eng",
-      "Swordmaster’s Youngest Son online"
+      "read Swordmaster\u2019s Youngest Son",
+      "Swordmaster\u2019s Youngest Son english",
+      "Swordmaster\u2019s Youngest Son eng",
+      "download Swordmaster\u2019s Youngest Son eng",
+      "Swordmaster\u2019s Youngest Son online"
     ]
   },
   "the-priest-of-corruption": {
@@ -205,7 +205,7 @@
   },
   "the-return-of-the-crazy-demon": {
     "imagelogo": "the-return-of-the-crazy-demon.webp",
-    "synopsis": "Lee Jaha, after stealing a powerful artifact and falling off a cliff, awakens in his younger body, using his knowledge to pursue his martial arts ambitions anew.",
+    "synopsis": "",
     "artist": "Hi Lee",
     "author": "Jinseong Yu",
     "genres": [
@@ -223,7 +223,7 @@
       "download The Return of the Crazy Demon eng",
       "The Return of the Crazy Demon online"
     ]
-  },  
+  },
   "kingdom": {
     "imagelogo": "kingdom_manga.png",
     "synopsis": "In China's Warring States era, war orphan Xin aims to become the greatest general and helps the young King of Qin fight to unify China.",
@@ -243,7 +243,7 @@
       "download Kingdom manga eng",
       "Kingdom manga online"
     ]
-  },  
+  },
   "demon-magic-emperor": {
     "imagelogo": "magic-emperor.jpg",
     "synopsis": "Zhuo Fan, a demonic emperor betrayed and killed, reincarnates into a servant boy's body and seeks revenge while regaining his power.",
@@ -263,7 +263,23 @@
       "download Magic Emperor manhwa eng",
       "Magic Emperor manhwa online"
     ]
+  },
+  "demonic-evolution": {
+    "synopsis": "",
+    "artist": "",
+    "author": "",
+    "keywords": [
+      "Demonic Evolution / Wo",
+      "Jinhua",
+      "Emo / Demon Evolution / Me",
+      "Evolution",
+      "and the Demons / The Devil Never Cries / \u6211\uff0c\u8fdb\u5316\uff0c\u6076\u9b54"
+    ],
+    "genres": [
+      "Action",
+      "Adventure",
+      "Fantasy"
+    ],
+    "imagelogo": "demonic-evolution.webp"
   }
-
-
 }
