@@ -1,6 +1,5 @@
 import os
 import subprocess
-import json
 from dotenv import load_dotenv
 
 # === Load GitHub Token from .env ===
@@ -11,7 +10,10 @@ if not TOKEN:
 
 # === Paths ===
 REPO_PATH = os.path.expanduser("~/server-backend")
-JSON_FILE = os.path.join(REPO_PATH, "json", "manhwa_list.json")
+FILES_TO_CHECK = [
+    "json/manhwa_list.json",
+    "json/manwha_details.json"
+]
 REMOTE_URL = f"https://{TOKEN}@github.com/gorzerk1/manwhaS-backend.git"
 
 # === Pull latest from GitHub ===
@@ -22,15 +24,15 @@ def git_pull():
 def set_git_remote():
     subprocess.run(["git", "remote", "set-url", "origin", REMOTE_URL], cwd=REPO_PATH, check=True)
 
-# === Check if file changed ===
+# === Check if files changed ===
 def is_file_changed():
-    result = subprocess.run(["git", "status", "--porcelain", "json/manhwa_list.json"], cwd=REPO_PATH, stdout=subprocess.PIPE, text=True)
+    result = subprocess.run(["git", "status", "--porcelain"] + FILES_TO_CHECK, cwd=REPO_PATH, stdout=subprocess.PIPE, text=True)
     return bool(result.stdout.strip())
 
 # === Commit and Push ===
 def git_push():
-    subprocess.run(["git", "add", "json/manhwa_list.json"], cwd=REPO_PATH, check=True)
-    subprocess.run(["git", "commit", "-m", "update manhwa_list"], cwd=REPO_PATH, check=True)
+    subprocess.run(["git", "add"] + FILES_TO_CHECK, cwd=REPO_PATH, check=True)
+    subprocess.run(["git", "commit", "-m", "update manhwa json files"], cwd=REPO_PATH, check=True)
     subprocess.run(["git", "push"], cwd=REPO_PATH, check=True)
     print("🚀 Pushed to GitHub.")
 
@@ -40,7 +42,7 @@ if __name__ == "__main__":
     set_git_remote()
 
     if is_file_changed():
-        print("✅ manhwa_list.json changed. Pushing...")
+        print("✅ manhwa JSON files changed. Pushing...")
         git_push()
     else:
         print("⏭ No changes. Nothing to push.")
