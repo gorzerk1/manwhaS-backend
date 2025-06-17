@@ -47,6 +47,9 @@ for slug, sources in manhwa_list.items():
         current.setdefault("keywords", [])
         current.setdefault("genres", [])
 
+        # === SYNOPSIS (site has none)
+        current["synopsis"] = ""
+
         # === IMAGE
         image_name = f"{slug}.webp"
         image_path = os.path.join(image_dir, image_name)
@@ -65,12 +68,6 @@ for slug, sources in manhwa_list.items():
                     print(f"⚠️ Failed to download image for {slug}: {img_err}")
         else:
             print(f"↪️ Image already exists: {image_name}")
-
-        # === SYNOPSIS
-        if not current["synopsis"].strip():
-            syn_tag = soup.select_one("div.summary__content p")
-            if syn_tag:
-                current["synopsis"] = syn_tag.text.strip()
 
         # === KEYWORDS (Alternative)
         if not current["keywords"]:
