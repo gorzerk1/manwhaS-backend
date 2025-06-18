@@ -79,7 +79,6 @@ def extract_asura_latest_chapter(series_url):
 
 # === ONLINE CHAPTER CHECK ===
 def check_online_chapter(name, data):
-    global updated  # ✅ move to top to avoid syntax error
     site = data.get("site")
     site_name = data.get("name", name)
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -95,6 +94,7 @@ def check_online_chapter(name, data):
                 new_url = fetch_asura_series_url(name)
                 chapter = extract_asura_latest_chapter(new_url)
                 data["url"] = new_url
+                global updated
                 updated = True
                 return chapter
 
@@ -120,31 +120,42 @@ def check_online_chapter(name, data):
             return max([int(m.group(1)) for link in links if (m := re.search(r'/chapter-(\d+)', link.get("href", "")))], default=None)
 
         elif site == "manhuaplus":
+            global updated
             url = data.get("url")
             try:
                 if not url:
                     search_slug = site_name.lower().replace(" ", "-").replace("_", "-")
-                    res = requests.get("https://manhuaplus.org", headers=headers, timeout=10)
-                    soup = BeautifulSoup(res.text, "html.parser")
+                    base_url = "https://manhuaplus.org/all-manga/"
+                    found = False
 
-                    home_tab = soup.select_one("div#home-tab-update")
-                    if not home_tab:
-                        raise Exception("Homepage format not found (no home-tab-update)")
-
-                    a_tags = home_tab.select('a[href*="/manga/"]')
-                    for a_tag in a_tags:
-                        href = a_tag.get("href", "").lower()
-                        title = a_tag.get("title", "").lower()
-                        if search_slug in href or search_slug in title:
-                            url = href
+                    for page in range(1, 11):
+                        res = requests.get(f"{base_url}{page}", headers=headers, timeout=10)
+                        soup = BeautifulSoup(res.text, "html.parser")
+                        grid = soup.select_one("div.grid.gtc-f141a.gg-20.p-13.mh-77vh")
+                        if not grid:
+                            continue
+                        divs = grid.select("> div")
+                        for div in divs:
+                            a_tag = div.find("a", href=True)
+                            if not a_tag:
+                                continue
+                            href = a_tag["href"].lower()
+                            title = a_tag.get("title", "").lower()
+                            if "/manga/" in href and search_slug in href:
+                                match = re.match(r"(https://manhuaplus\.org/manga/[^/]+)", href)
+                                if match:
+                                    url = match.group(1)
+                                    data["url"] = url
+                                    updated = True
+                                    found = True
+                                    break
+                        if found:
                             break
 
                     if not url:
-                        raise Exception("Could not find manhua URL on manhuaplus")
+                        raise Exception("Could not find manhua URL on manhuaplus all-manga pages")
 
-                    data["url"] = url
-                    updated = True
-
+                # Now fetch chapter list
                 res = requests.get(url, headers=headers, timeout=10)
                 soup = BeautifulSoup(res.text, "html.parser")
                 links = soup.select("ul.main li.wp-manga-chapter a")
@@ -157,6 +168,7 @@ def check_online_chapter(name, data):
             except Exception as e:
                 print(f"❌ Error checking manhuaplus for {site_name}: {e}")
                 return None
+
 
         elif site == "readkingdom":
             url = "https://ww4.readkingdom.com"
@@ -208,6 +220,7 @@ if __name__ == "__main__":
             for data in entries:
                 site = data.get("site", "unknown")
 
+                # Get local chapter
                 if site == "asura":
                     local_chapter = get_asura_latest_chapter(folder_path)
                 else:
@@ -239,3 +252,4 @@ if __name__ == "__main__":
         with open(json_path, "w") as f:
             json.dump(manhwa_list, f, indent=2)
         print("📝 manhwa_list.json updated with fixed or missing URLs.")
+ 
