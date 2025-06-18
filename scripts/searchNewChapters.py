@@ -133,7 +133,7 @@ def check_online_chapter(name, data):
                         grid = soup.select_one("div.grid.gtc-f141a.gg-20.p-13.mh-77vh")
                         if not grid:
                             continue
-                        divs = grid.select("> div")
+                        divs = grid.find_all("div", recursive=False)
                         for div in divs:
                             a_tag = div.find("a", href=True)
                             if not a_tag:
