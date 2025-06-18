@@ -41,7 +41,7 @@ def get_local_latest_chapter(folder_path):
             chapter_nums.append(int(match.group(1)))
     return max(chapter_nums) if chapter_nums else None
 
-# === ASURA URL FINDER (FIXED) ===
+# === ASURA URL FINDER ===
 def fetch_asura_series_url(name):
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
@@ -125,8 +125,6 @@ def check_online_chapter(name, data):
                 if not url:
                     search_slug = site_name.lower().replace(" ", "-").replace("_", "-")
                     base_url = "https://manhuaplus.org/all-manga/"
-                    found = False
-
                     for page in range(1, 11):
                         res = requests.get(f"{base_url}{page}", headers=headers, timeout=10)
                         soup = BeautifulSoup(res.text, "html.parser")
@@ -139,22 +137,18 @@ def check_online_chapter(name, data):
                             if not a_tag:
                                 continue
                             href = a_tag["href"].lower()
-                            title = a_tag.get("title", "").lower()
                             if "/manga/" in href and search_slug in href:
-                                match = re.match(r"(https://manhuaplus\\.org/manga/[^/]+)", href)
+                                match = re.match(r"(https://manhuaplus\.org/manga/[^/]+)", href)
                                 if match:
                                     url = match.group(1)
                                     data["url"] = url
                                     updated = True
-                                    found = True
                                     break
-                        if found:
+                        if url:
                             break
-
                     if not url:
                         raise Exception("Could not find manhua URL on manhuaplus all-manga pages")
 
-                # Now fetch chapters
                 res = requests.get(url, headers=headers, timeout=10)
                 soup = BeautifulSoup(res.text, "html.parser")
                 links = soup.select("ul.main li.wp-manga-chapter a")
@@ -201,30 +195,21 @@ if __name__ == "__main__":
 
     for folder in manhwa_list:
         folder_path = os.path.join(pictures_path, folder)
-
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
             print(f"📁 Created folder: {folder_path}")
-
         if os.path.isdir(folder_path):
             if not printed_header:
                 print("_" * 86)
                 printed_header = True
-
             entries = manhwa_list[folder]
             preferred_logged = False
             preferred_online = None
 
             for data in entries:
                 site = data.get("site", "unknown")
-
-                if site == "asura":
-                    local_chapter = get_asura_latest_chapter(folder_path)
-                else:
-                    local_chapter = get_local_latest_chapter(folder_path)
-
+                local_chapter = get_asura_latest_chapter(folder_path) if site == "asura" else get_local_latest_chapter(folder_path)
                 online_chapter = check_online_chapter(folder, data)
-
                 if online_chapter is not None and (not local_chapter or online_chapter > local_chapter):
                     tag = "(prefered)" if not preferred_logged else "(skipped)"
                     print(f"🆕 {site} - {folder}: New Chapter {online_chapter} {tag}")
@@ -239,7 +224,6 @@ if __name__ == "__main__":
                     else:
                         online_str = "❌ error" if online_chapter is None else online_chapter
                         print(f"✅ {site} - {folder}: No new chapter (Local: {local_chapter}, Online: {online_str})")
-
             print("_" * 86)
 
     if not new_found:
