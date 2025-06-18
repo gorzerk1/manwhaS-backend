@@ -151,6 +151,59 @@ def check_online_chapter(name, data):
 
                 res = requests.get(url, headers=headers, timeout=10)
                 soup = BeautifulSoup(res.text, "html.parser")
+                links = soup.select("a[href*='/chapter-']")
+                chapter_nums = []
+
+                for link in links:
+                    href = link.get("href", "")
+                    text = link.text.strip()
+                    # Try extract from href
+                    m_href = re.search(r'/chapter-(\d{1,4})', href, re.IGNORECASE)
+                    if m_href:
+                        chapter_nums.append(int(m_href.group(1)))
+                        continue
+                    # Fallback to text
+                    m_text = re.search(r'chapter\s*(\d{1,4})', text, re.IGNORECASE)
+                    if m_text:
+                        chapter_nums.append(int(m_text.group(1)))
+
+                return max(chapter_nums) if chapter_nums else None
+
+            except Exception as e:
+                print(f"❌ Error checking manhuaplus for {site_name}: {e}")
+                return None
+
+            url = data.get("url")
+            try:
+                if not url:
+                    search_slug = site_name.lower().replace(" ", "-").replace("_", "-")
+                    base_url = "https://manhuaplus.org/all-manga/"
+                    for page in range(1, 11):
+                        res = requests.get(f"{base_url}{page}", headers=headers, timeout=10)
+                        soup = BeautifulSoup(res.text, "html.parser")
+                        grid = soup.select_one("div.grid.gtc-f141a.gg-20.p-13.mh-77vh")
+                        if not grid:
+                            continue
+                        divs = grid.find_all("div", recursive=False)
+                        for div in divs:
+                            a_tag = div.find("a", href=True)
+                            if not a_tag:
+                                continue
+                            href = a_tag["href"].lower()
+                            if "/manga/" in href and search_slug in href:
+                                match = re.match(r"(https://manhuaplus\.org/manga/[^/]+)", href)
+                                if match:
+                                    url = match.group(1)
+                                    data["url"] = url
+                                    updated = True
+                                    break
+                        if url:
+                            break
+                    if not url:
+                        raise Exception("Could not find manhua URL on manhuaplus all-manga pages")
+
+                res = requests.get(url, headers=headers, timeout=10)
+                soup = BeautifulSoup(res.text, "html.parser")
                 links = soup.select("ul.main li.wp-manga-chapter a")
                 chapter_nums = []
 
