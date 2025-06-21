@@ -25,7 +25,7 @@
     "imagelogo": "legend-of-asura-the-venom-dragon.webp",
     "synopsis": "Jagang Jin, sole survivor of the Hundred-Flower Valley sect, seeks vengeance against the Poison Sect responsible for its destruction.",
     "artist": "Ant Studio",
-    "author": "--",
+    "author": "_",
     "genres": [
       "Action",
       "Adaptation",
@@ -43,7 +43,7 @@
   },
   "myst-might-mayhem": {
     "imagelogo": "myst-might-mayhem.webp",
-    "synopsis": "",
+    "synopsis": "[By the studio that brought you <Solo Leveling> and Same Author that brought you <Nano Machine, and Absolute Sword Sense!]\nJeong, the Slaughtering Scythe Demon, feels joy in killing others. He happens to look just like Mok Gyeongwoon, the third young master of the Mok Sword Manor... \"If you pretend to be me and live my life. I will let you out of this prison.\" \"Will you really give me that chance?\" Slash Kill the third young master and live his life pretending to be him. Will the fake Mok Gyeongwoon survive this life? The serial killer begins his new life as the third young master of the great Mok Sword Manor.",
     "artist": "Redice Studio / Kim Taehyung",
     "author": "Hanjoong Wolya / Mad Bird",
     "genres": [
@@ -87,7 +87,7 @@
     "imagelogo": "reaper-of-the-drifting-moon.webp",
     "synopsis": "Pyo Wol, after enduring years in a snake pit, emerges with unique martial arts techniques, becoming a feared assassin in the Jianghu.",
     "artist": "Redice Studio",
-    "author": "--",
+    "author": "_",
     "genres": [
       "Action",
       "Fantasy",
@@ -125,9 +125,9 @@
   },
   "surviving-as-a-genius-on-borrowed-time": {
     "imagelogo": "surviving-as-a-genius-on-borrowed-time.webp",
-    "synopsis": "",
+    "synopsis": "[By the Studio that brought you {The Return of the Crazy Demon}! and {Absolute Regression}!Jung Yeonshin was born with a short fate: being unable to live past the age of twenty. Although everyone in his family looked down on him, his skills were remarkable enough for him to create his own martial arts. One day, Yeonshin realized that he doesn't have much time left to live... This is where Jung Yeonshin, a terminally-ill genius, begins his desperate struggle to survive!",
     "artist": "JP",
-    "author": "--",
+    "author": "_",
     "genres": [
       "Action",
       "Adventure",
@@ -146,8 +146,8 @@
   "sword-fanatic-wanders-through-the-night": {
     "imagelogo": "sword-fanatic-wanders-through-the-night.webp",
     "synopsis": "Jin Sohan, raised by the Mystic Lunar Dance Troupe, embarks on a journey of revenge after the troupe is destroyed by one of the four great demons.",
-    "artist": "--",
-    "author": "--",
+    "artist": "_",
+    "author": "_",
     "genres": [
       "Action",
       "Adventure",
@@ -205,7 +205,7 @@
   },
   "the-return-of-the-crazy-demon": {
     "imagelogo": "the-return-of-the-crazy-demon.webp",
-    "synopsis": "",
+    "synopsis": "Yi Zaha. The crazy demon crazy for martial arts.While he was running away after stealing the heavenly pearl of the Demon Cult Leader, he fell off a cliff.After thinking that everything was over, he opened his eyes to see that he had returned back to when he was a waiter...And he is being beat up for something that he didn't do.The crazy demon who returned to the beginning of his days as a waiter!Will he go crazy again, or will he drive his enemies crazy?",
     "artist": "Hi Lee",
     "author": "Jinseong Yu",
     "genres": [
@@ -281,5 +281,34 @@
       "Fantasy"
     ],
     "imagelogo": "demonic-evolution.webp"
+  },
+  "the-great-mage-returns-after-4000-years": {
+    "imagelogo": "the-great-mage-returns-after-4000-years.webp",
+    "synopsis": "Lucas Trowman was the greatest archmage in history until he was condemned by Demigod to spend eternity losing his mind. But 4,000 years later, he\u2019s thrust back into this world, into the body of Frei Blake, the weakest, most un-talented student at the prestigious Westroad Academy for mages. After all this time, the world of magic has barely progressed. Could this be the work of Demigod? Determined to find out, Lucas seeks to reach the highest levels of power once again and get his revenge.",
+    "genres": [
+      "Action",
+      "Adventure",
+      "Fantasy"
+    ],
+    "keywords": [
+      "read The Great Mage Returns After 4000 Years, The Great Mage Returns After 4000 Years english, The Great Mage Returns After 4000 Years eng, download The Great Mage Returns After 4000 Years eng, The Great Mage Returns After 4000 Years online"
+    ],
+    "artist": "REDICE Studio, KD-DRAGON (\uae40\ub355\uc6a9)",
+    "author": "Nakhasan (\ub099\ud558\uc0b0), Barnicle (\ub530\uac1c\ube44)"
+  },
+  "the-world-after-the-end": {
+    "imagelogo": "the-world-after-the-end.webp",
+    "synopsis": "An original story, brought to you by the author of <Omniscient Reader's Viewpoint>, Author Sing-Shong. This is about a man who didn't regress when everyone else returned back to the past.Humans were suddenly summoned to become \u201cWalkers\u201d, and they needed to clear the tower to save the world. . . Floor 77: The \u201cStone of Regression\u201d was discovered.Walkers could now \u201creturn\u201d to the past. Slowly, everyone left. . . Humanity\u2019s last hope, \u201cCarpe Diem\u201d, was formed, made up of people who refused to abandon the world. . . The last Walker reached floor 100.He no longer knew what to believe.",
+    "genres": [
+      "Action",
+      "Adventure",
+      "Fantasy",
+      "Shounen"
+    ],
+    "keywords": [
+      "read The World After The End, The World After The End english, The World After The End eng, download The World After The End eng, The World After The End online"
+    ],
+    "artist": "Undead Potato, \uc5b8\ub370\ub4dc \uac10\uc790",
+    "author": "S-Cynaan, Sing-Shong, \uc2f1\uc211"
   }
 }
