@@ -281,8 +281,12 @@ def check_online_chapter(name, data):
                 raise Exception(f"Failed to fetch ReadKingdom page: {e}")
 
             soup = BeautifulSoup(res.text, "html.parser")
-            blocks = soup.select("div.bg-bg-secondary.p-3.rounded.mb-3.shadow")
-            print(f"🔎 Found {len(blocks)} chapter blocks")
+            all_blocks = soup.select("div.bg-bg-secondary.p-3.rounded.mb-3.shadow")
+            blocks = [
+                div for div in all_blocks
+                if div.select_one("a[href*='kingdom-chapter-']")
+            ]
+            print(f"🔎 Found {len(blocks)} valid chapter blocks (out of {len(all_blocks)} total)")
 
             for block in blocks:
                 # Check if it's valid (has label text)
