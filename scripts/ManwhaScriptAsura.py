@@ -102,7 +102,9 @@ for manhwa in manhwa_list:
 
     for chap in range(1, last_chapter + 1):
         chap_folder = os.path.join(folder_path, f"chapter-{chap}")
+        temp_folder = os.path.join(folder_path, f"chapter-{chap}_temp")
         chap_url = url_format.format(chap)
+        needs_replacement = False
 
         if os.path.exists(chap_folder):
             src_file = os.path.join(chap_folder, "source.txt")
@@ -111,26 +113,22 @@ for manhwa in manhwa_list:
                     if f.read().strip() == "Downloaded from AsuraScans":
                         log_lines.append(f"[Chapter {chap}] Skipped (already from AsuraScans)")
                         continue
-                print(f"🗑️ Chapter {chap} not from Asura → Re-downloading...")
-                shutil.rmtree(chap_folder, ignore_errors=True)
+                    else:
+                        needs_replacement = True
             else:
                 log_lines.append(f"[Chapter {chap}] Skipped (no source file, assuming Asura)")
                 continue
 
-        print(f"📅 Downloading Chapter {chap}...")
+        print(f"📅 Downloading Chapter {chap}... (to temp)")
         success = False
         for attempt in range(1, 6):
             driver = None
             try:
-                print(f"🌐 Opening browser...")
                 driver = start_browser()
                 driver.set_page_load_timeout(60)
                 driver.set_script_timeout(30)
 
-                print(f"🔗 Connecting to chapter page...")
                 driver.get(chap_url)
-
-                print(f"⏳ Waiting for image elements...")
                 WebDriverWait(driver, 5).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "img.object-cover.mx-auto"))
                 )
@@ -139,26 +137,25 @@ for manhwa in manhwa_list:
                 if not images:
                     raise Exception("No images found")
 
-                print(f"🖼️ Found {len(images)} images. Starting download...")
-                os.makedirs(chap_folder, exist_ok=True)
+                os.makedirs(temp_folder, exist_ok=True)
                 for i, img in enumerate(images):
-                    print(f"⬇️ Downloading image {i+1}/{len(images)}...")
-                    try:
-                        src = WebDriverWait(driver, 10).until(lambda d: img.get_attribute("src"))
-                    except:
-                        raise Exception(f"Timeout getting src for image {i+1}")
-
+                    src = WebDriverWait(driver, 10).until(lambda d: img.get_attribute("src"))
                     ext = src.split(".")[-1].split("?")[0]
                     file_name = f"{i+1:03d}.{ext}"
                     img_data = requests.get(src, headers={"User-Agent": "Mozilla/5.0"}, timeout=10).content
-                    with open(os.path.join(chap_folder, file_name), "wb") as f:
+                    with open(os.path.join(temp_folder, file_name), "wb") as f:
                         f.write(img_data)
                     sleep(0.3)
 
-                with open(os.path.join(chap_folder, "source.txt"), "w") as f:
+                with open(os.path.join(temp_folder, "source.txt"), "w") as f:
                     f.write("Downloaded from AsuraScans")
 
-                print(f"✅ Saved chapter {chap}")
+                if needs_replacement:
+                    print(f"🧹 Replacing old chapter folder: {chap_folder}")
+                    shutil.rmtree(chap_folder, ignore_errors=True)
+
+                os.rename(temp_folder, chap_folder)
+
                 log_lines.append(f"[Chapter {chap}] ✅ Done")
                 success = True
                 break
@@ -174,9 +171,8 @@ for manhwa in manhwa_list:
         if not success:
             log_lines.append(f"[Chapter {chap}] ❌ Failed")
             all_errors.append(f"{name} Chapter {chap}: failed after retries")
-            if os.path.exists(chap_folder):
-                print(f"🧹 Removing failed chapter folder: {chap_folder}")
-                shutil.rmtree(chap_folder, ignore_errors=True)
+            if os.path.exists(temp_folder):
+                shutil.rmtree(temp_folder, ignore_errors=True)
 
     with open(log_path, "w", encoding="utf-8") as logf:
         logf.write(f"📚 Log for: {name}\n\n")
