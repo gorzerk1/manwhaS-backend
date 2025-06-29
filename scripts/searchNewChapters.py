@@ -269,7 +269,6 @@ def check_online_chapter(name, data):
                 return None
 
         elif site == "readkingdom":
-            print(f"🌐 Checking ReadKingdom for '{name}'")
             url = "https://ww5.readkingdom.com/manga/kingdom/"
 
             try:
@@ -281,26 +280,19 @@ def check_online_chapter(name, data):
             soup = BeautifulSoup(res.text, "html.parser")
             all_blocks = soup.select("div.bg-bg-secondary.p-3.rounded.mb-3.shadow")
 
-            # Filter blocks that contain a valid chapter link and a valid label
             valid_chapters = []
             for div in all_blocks:
                 a_tag = div.select_one("a[href*='kingdom-chapter-']")
                 label = div.select_one("div.text-xs.font-semibold.text-text-muted.uppercase")
 
                 if not a_tag or not label or not label.text.strip():
-                    continue  # Skip invalid block
+                    continue
 
                 match = re.search(r'kingdom-chapter-(\d{1,4})', a_tag["href"])
                 if match:
                     valid_chapters.append(int(match.group(1)))
 
-            if not valid_chapters:
-                print("🛑 No valid chapters found.")
-                return None
-
-            latest = max(valid_chapters)
-            print(f"📈 Found {len(valid_chapters)} valid chapters. Latest online chapter: {latest}")
-            return latest
+            return max(valid_chapters) if valid_chapters else None
 
 
     except Exception as e:
