@@ -269,11 +269,29 @@ def check_online_chapter(name, data):
                 return None
 
         elif site == "readkingdom":
-            url = "https://ww4.readkingdom.com"
+            local_chapter = get_local_latest_chapter(os.path.join(pictures_path, name))
+            url = f"https://ww5.readkingdom.com/manga/kingdom/"
             res = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
-            links = soup.select("a[href*='/chapter/kingdom-chapter-']")
-            return max([int(m.group(1)) for link in links if (m := re.search(r'kingdom-chapter-(\d{1,4})', link.get("href", "")))], default=None)
+            blocks = soup.select("div.bg-bg-secondary.p-3.rounded.mb-3.shadow")
+
+            max_chapter = None
+
+            for block in blocks:
+                label = block.select_one("div.text-xs.font-semibold.text-text-muted.uppercase")
+                if not label or not label.text.strip():
+                    continue  # Invalid, skip
+                a_tag = block.select_one("a[href*='kingdom-chapter-']")
+                if not a_tag:
+                    continue
+                match = re.search(r'kingdom-chapter-(\d{1,4})', a_tag["href"])
+                if match:
+                    chap_num = int(match.group(1))
+                    if chap_num > local_chapter:
+                        max_chapter = max(max_chapter or 0, chap_num)
+
+            return max_chapter
+
 
     except Exception as e:
         print(f"❌ Error for {name} ({site}): {e}")
