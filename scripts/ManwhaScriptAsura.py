@@ -161,7 +161,7 @@ for manhwa in manhwa_list:
                 break
 
             except Exception as e:
-                print(f"❌ Attempt {attempt}/5 failed: {e}")
+                print(f"❌ Attempt {attempt}/1 failed: {e}")
                 sleep(3)
             finally:
                 if driver:
