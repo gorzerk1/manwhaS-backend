@@ -270,10 +270,8 @@ def check_online_chapter(name, data):
 
         elif site == "readkingdom":
             print(f"🌐 Checking ReadKingdom for '{name}'")
-            local_chapter = get_local_latest_chapter(os.path.join(pictures_path, name))
-            print(f"📘 Local chapter: {local_chapter}")
-
             url = "https://ww5.readkingdom.com/manga/kingdom/"
+
             try:
                 res = requests.get(url, headers=headers, timeout=10)
                 res.raise_for_status()
@@ -282,35 +280,27 @@ def check_online_chapter(name, data):
 
             soup = BeautifulSoup(res.text, "html.parser")
             all_blocks = soup.select("div.bg-bg-secondary.p-3.rounded.mb-3.shadow")
-            blocks = [
-                div for div in all_blocks
-                if div.select_one("a[href*='kingdom-chapter-']")
-            ]
-            print(f"🔎 Found {len(blocks)} valid chapter blocks (out of {len(all_blocks)} total)")
 
-            for block in blocks:
-                # Check if it's valid (has label text)
-                label = block.select_one("div.text-xs.font-semibold.text-text-muted.uppercase")
-                if not label or not label.text.strip():
-                    continue  # invalid or empty tag, skip
+            # Filter blocks that contain a valid chapter link and a valid label
+            valid_chapters = []
+            for div in all_blocks:
+                a_tag = div.select_one("a[href*='kingdom-chapter-']")
+                label = div.select_one("div.text-xs.font-semibold.text-text-muted.uppercase")
 
-                # Get chapter number from link
-                a_tag = block.select_one("a[href*='kingdom-chapter-']")
-                if not a_tag:
-                    continue
+                if not a_tag or not label or not label.text.strip():
+                    continue  # Skip invalid block
+
                 match = re.search(r'kingdom-chapter-(\d{1,4})', a_tag["href"])
-                if not match:
-                    continue
+                if match:
+                    valid_chapters.append(int(match.group(1)))
 
-                chap_num = int(match.group(1))
+            if not valid_chapters:
+                print("🛑 No valid chapters found.")
+                return None
 
-                # Only care about chapters newer than local
-                if chap_num > local_chapter:
-                    print(f"🆕 Found NEWER online chapter: {chap_num}")
-                    return chap_num  # Return immediately since list is newest → oldest
-
-            print("🛑 No newer chapters found online.")
-            return None
+            latest = max(valid_chapters)
+            print(f"📈 Found {len(valid_chapters)} valid chapters. Latest online chapter: {latest}")
+            return latest
 
 
     except Exception as e:
