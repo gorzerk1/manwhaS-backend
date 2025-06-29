@@ -121,7 +121,7 @@ for manhwa in manhwa_list:
 
         print(f"📅 Downloading Chapter {chap}... (to temp)")
         success = False
-        for attempt in range(1, 6):
+        for attempt in range(1, 2):
             driver = None
             try:
                 driver = start_browser()
