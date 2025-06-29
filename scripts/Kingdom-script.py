@@ -15,8 +15,9 @@ os.system("pkill -f selenium")
 
 # === CONFIG ===
 manga_name = "kingdom"
-base_url = "https://ww4.readkingdom.com"
 chapter_slug = "kingdom-chapter"
+base_domains = [f"https://ww{i}.readkingdom.com" for i in range(1, 8)]  # ww1 to ww7
+
 base_dir = os.path.expanduser("~/backend")
 pictures_base = os.path.join(base_dir, "pictures", manga_name)
 log_base = os.path.join(base_dir, "logs")
@@ -87,26 +88,31 @@ while True:
 
     chapter_dir = os.path.join(pictures_base, f"chapter-{chapter}")
     print(f"\n📚 Chapter {chapter}")
+    img_urls = []
+    final_url = None
 
-    print("🔀 Trying padded URL...")
-    padded_url = f"{base_url}/chapter/{chapter_slug}-{chapter:03d}/"
-    img_urls = try_download(padded_url)
-
-    if len(img_urls) <= 1:
-        print("⚠️ No images or only 1. Trying fallback URL...")
+    print("🔍 Trying all subdomains...")
+    for base_url in base_domains:
+        padded_url = f"{base_url}/chapter/{chapter_slug}-{chapter:03d}/"
         fallback_url = f"{base_url}/chapter/{chapter_slug}-{chapter}/"
-        img_urls = try_download(fallback_url)
 
-    if len(img_urls) <= 1:
-        print("⚠️ No valid images for padded or fallback. Likely last chapter.")
+        print(f"🌐 Testing: {padded_url}")
+        img_urls = try_download(padded_url)
+        if len(img_urls) > 4:
+            final_url = padded_url
+            break
+
+        print(f"🌐 Testing fallback: {fallback_url}")
+        img_urls = try_download(fallback_url)
+        if len(img_urls) > 4:
+            final_url = fallback_url
+            break
+
+    if not final_url:
+        print("⚠️ No valid images found on any subdomain. Likely last chapter.")
         break
 
-    if len(img_urls) <= 4:
-        print(f"⚠️ Too few images ({len(img_urls)}). Skipping.")
-        chapter += 1
-        continue
-
-    print(f"📸 Found {len(img_urls)} images")
+    print(f"✅ Found {len(img_urls)} images from: {final_url}")
     os.makedirs(chapter_dir, exist_ok=True)
 
     for i, img_url in enumerate(img_urls):
@@ -128,7 +134,7 @@ while True:
     print(f"📦 Total downloaded this run: {downloaded_gb:.5f} GB")
     print(f"💾 Total stored in EC2 (pictures folder): {current_total_gb:.5f} GB")
 
-    log_lines.append(f"[Chapter {chapter}] ✅ Done")
+    log_lines.append(f"[Chapter {chapter}] ✅ Done from {final_url}")
     existing.add(chapter)
     chapter += 1
 
