@@ -53,7 +53,11 @@ chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument('--user-agent=Mozilla/5.0')
 
 def start_browser():
-    return webdriver.Chrome(options=chrome_options)
+    try:
+        return webdriver.Chrome(options=chrome_options)
+    except Exception as e:
+        print("❌ Failed to start browser:", e)
+        return None
 
 def wait_for_connection():
     while True:
@@ -100,7 +104,12 @@ for manhwa in manhwa_list:
     os.makedirs(folder_path, exist_ok=True)
     last_chapter = get_latest_chapter(base_url)
 
+    skip_entire_manhwa = False
+
     for chap in range(1, last_chapter + 1):
+        if skip_entire_manhwa:
+            break
+
         chap_folder = os.path.join(folder_path, f"chapter-{chap}")
         chap_url = url_format.format(chap)
 
@@ -118,65 +127,65 @@ for manhwa in manhwa_list:
                 continue
 
         print(f"📅 Downloading Chapter {chap}...")
-        success = False
-        for attempt in range(1, 6):
-            driver = None
-            try:
-                print(f"🌐 Opening browser...")
-                driver = start_browser()
-                driver.set_page_load_timeout(60)
-                driver.set_script_timeout(30)
+        driver = None
+        try:
+            print(f"🌐 Opening browser...")
+            driver = start_browser()
+            if not driver:
+                raise Exception("Failed to start Chrome driver")
 
-                print(f"🔗 Connecting to chapter page...")
-                driver.get(chap_url)
+            driver.set_page_load_timeout(60)
+            driver.set_script_timeout(30)
 
-                print(f"⏳ Waiting for image elements...")
-                WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "img.object-cover.mx-auto"))
-                )
-                images = driver.find_elements(By.CSS_SELECTOR, "img.object-cover.mx-auto")
+            print(f"🔗 Connecting to chapter page...")
+            driver.get(chap_url)
 
-                if not images:
-                    raise Exception("No images found")
+            print(f"⏳ Waiting for image elements...")
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "img.object-cover.mx-auto"))
+            )
+            images = driver.find_elements(By.CSS_SELECTOR, "img.object-cover.mx-auto")
 
-                print(f"🖼️ Found {len(images)} images. Starting download...")
-                os.makedirs(chap_folder, exist_ok=True)
-                for i, img in enumerate(images):
-                    print(f"⬇️ Downloading image {i+1}/{len(images)}...")
-                    try:
-                        src = WebDriverWait(driver, 10).until(lambda d: img.get_attribute("src"))
-                    except:
-                        raise Exception(f"Timeout getting src for image {i+1}")
+            if not images:
+                raise Exception("No images found")
 
-                    ext = src.split(".")[-1].split("?")[0]
-                    file_name = f"{i+1:03d}.{ext}"
-                    img_data = requests.get(src, headers={"User-Agent": "Mozilla/5.0"}, timeout=10).content
-                    with open(os.path.join(chap_folder, file_name), "wb") as f:
-                        f.write(img_data)
-                    sleep(0.3)
+            print(f"🖼️ Found {len(images)} images. Starting download...")
+            os.makedirs(chap_folder, exist_ok=True)
+            for i, img in enumerate(images):
+                print(f"⬇️ Downloading image {i+1}/{len(images)}...")
+                src = img.get_attribute("src")
+                if not src:
+                    raise Exception(f"Missing src for image {i+1}")
 
-                with open(os.path.join(chap_folder, "source.txt"), "w") as f:
-                    f.write("Downloaded from AsuraScans")
+                ext = src.split(".")[-1].split("?")[0]
+                file_name = f"{i+1:03d}.{ext}"
+                img_data = requests.get(src, headers={"User-Agent": "Mozilla/5.0"}, timeout=10).content
+                with open(os.path.join(chap_folder, file_name), "wb") as f:
+                    f.write(img_data)
+                sleep(0.3)
 
-                print(f"✅ Saved chapter {chap}")
-                log_lines.append(f"[Chapter {chap}] ✅ Done")
-                success = True
-                break
+            with open(os.path.join(chap_folder, "source.txt"), "w") as f:
+                f.write("Downloaded from AsuraScans")
 
-            except Exception as e:
-                print(f"❌ Attempt {attempt}/5 failed: {e}")
-                sleep(3)
-            finally:
-                if driver:
-                    try: driver.quit()
-                    except: pass
+            print(f"✅ Saved chapter {chap}")
+            log_lines.append(f"[Chapter {chap}] ✅ Done")
 
-        if not success:
-            log_lines.append(f"[Chapter {chap}] ❌ Failed")
-            all_errors.append(f"{name} Chapter {chap}: failed after retries")
+        except Exception as e:
+            print(f"⚠️ Skipping entire manhwa '{name}' due to error: {e}")
+            log_lines.append(f"[Chapter {chap}] ❌ Skipped due to error")
+            all_errors.append(f"{name}: skipped due to error → {e}")
+            skip_entire_manhwa = True
             if os.path.exists(chap_folder):
                 print(f"🧹 Removing failed chapter folder: {chap_folder}")
                 shutil.rmtree(chap_folder, ignore_errors=True)
+            break
+
+        finally:
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
 
     with open(log_path, "w", encoding="utf-8") as logf:
         logf.write(f"📚 Log for: {name}\n\n")
