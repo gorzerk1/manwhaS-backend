@@ -113,6 +113,8 @@ for manhwa in manhwa_list:
         chap_folder = os.path.join(folder_path, f"chapter-{chap}")
         chap_url = url_format.format(chap)
 
+        # 🧠 Step 1: Decide if old chapter should be deleted later
+        delete_existing = False
         if os.path.exists(chap_folder):
             src_file = os.path.join(chap_folder, "source.txt")
             if os.path.exists(src_file):
@@ -120,11 +122,8 @@ for manhwa in manhwa_list:
                     if f.read().strip() == "Downloaded from AsuraScans":
                         log_lines.append(f"[Chapter {chap}] Skipped (already from AsuraScans)")
                         continue
-                print(f"🗑️ Chapter {chap} not from Asura → Re-downloading...")
-                shutil.rmtree(chap_folder, ignore_errors=True)
-            else:
-                log_lines.append(f"[Chapter {chap}] Skipped (no source file, assuming Asura)")
-                continue
+            print(f"🔄 Chapter {chap} is not from Asura — will replace only if real Asura images found")
+            delete_existing = True
 
         print(f"📅 Downloading Chapter {chap}...")
         driver = None
@@ -149,8 +148,14 @@ for manhwa in manhwa_list:
             if not images:
                 raise Exception("No images found")
 
-            print(f"🖼️ Found {len(images)} images. Starting download...")
+            # ✅ Step 2: Now it's safe to delete old folder
+            if delete_existing:
+                print(f"🧹 Deleting old non-Asura chapter {chap_folder}")
+                shutil.rmtree(chap_folder, ignore_errors=True)
+
+            # ✅ Step 3: Download images
             os.makedirs(chap_folder, exist_ok=True)
+            print(f"🖼️ Found {len(images)} images. Starting download...")
             for i, img in enumerate(images):
                 print(f"⬇️ Downloading image {i+1}/{len(images)}...")
                 src = img.get_attribute("src")
@@ -175,9 +180,6 @@ for manhwa in manhwa_list:
             log_lines.append(f"[Chapter {chap}] ❌ Skipped due to error")
             all_errors.append(f"{name}: skipped due to error → {e}")
             skip_entire_manhwa = True
-            if os.path.exists(chap_folder):
-                print(f"🧹 Removing failed chapter folder: {chap_folder}")
-                shutil.rmtree(chap_folder, ignore_errors=True)
             break
 
         finally:
