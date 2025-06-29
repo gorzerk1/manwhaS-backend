@@ -284,25 +284,29 @@ def check_online_chapter(name, data):
             blocks = soup.select("div.bg-bg-secondary.p-3.rounded.mb-3.shadow")
             print(f"🔎 Found {len(blocks)} chapter blocks")
 
-            max_chapter = None
             for block in blocks:
+                # Check if it's valid (has label text)
                 label = block.select_one("div.text-xs.font-semibold.text-text-muted.uppercase")
                 if not label or not label.text.strip():
-                    continue  # invalid, skip
+                    continue  # invalid or empty tag, skip
 
+                # Get chapter number from link
                 a_tag = block.select_one("a[href*='kingdom-chapter-']")
                 if not a_tag:
                     continue
-
                 match = re.search(r'kingdom-chapter-(\d{1,4})', a_tag["href"])
-                if match:
-                    chap_num = int(match.group(1))
-                    print(f"🔢 Found valid online chapter: {chap_num}")
-                    if chap_num > local_chapter:
-                        max_chapter = max(max_chapter or 0, chap_num)
+                if not match:
+                    continue
 
-            print(f"✅ Highest online valid chapter: {max_chapter}")
-            return max_chapter
+                chap_num = int(match.group(1))
+
+                # Only care about chapters newer than local
+                if chap_num > local_chapter:
+                    print(f"🆕 Found NEWER online chapter: {chap_num}")
+                    return chap_num  # Return immediately since list is newest → oldest
+
+            print("🛑 No newer chapters found online.")
+            return None
 
 
     except Exception as e:
