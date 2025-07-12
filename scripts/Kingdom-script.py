@@ -6,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
-# Kill any zombie browser processes before starting
+# Kill zombie browser processes
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
 os.system("pkill -f chromium")
@@ -44,6 +44,7 @@ headers = {"User-Agent": "Mozilla/5.0"}
 start_time = time()
 log_lines = []
 total_downloaded_bytes = 0
+working_domain = None  # Save first working wwX domain
 
 def try_download(chapter_url):
     try:
@@ -57,8 +58,15 @@ def try_download(chapter_url):
         valid_exts = [".jpg", ".jpeg", ".png", ".webp"]
         img_urls = [img.get_attribute("src") for img in img_elements if img.get_attribute("src")]
         img_urls = [url for url in img_urls if any(url.lower().endswith(ext) for ext in valid_exts)]
+
+        # 🐞 Save HTML if no images found (debugging)
+        if len(img_urls) == 0:
+            with open("debug_chapter.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+
         return img_urls
-    except:
+    except Exception as e:
+        print(f"❌ Error loading page: {e}")
         return []
 
 def get_total_dir_size_gb(path):
@@ -71,7 +79,7 @@ def get_total_dir_size_gb(path):
                 continue
     return round(total / 1024 / 1024 / 1024, 5)
 
-# Scan already existing chapters
+# Find already downloaded chapters
 existing = {
     int(name.replace("chapter-", ""))
     for name in os.listdir(pictures_base)
@@ -80,7 +88,7 @@ existing = {
 max_existing = max(existing) if existing else 0
 print(f"⏭️ Skipped {len(existing)} chapters already downloaded (up to chapter {max_existing})")
 
-# Start from first missing
+# Start downloading
 chapter = 1
 while True:
     while chapter in existing:
@@ -91,22 +99,30 @@ while True:
     img_urls = []
     final_url = None
 
-    print("🔍 Trying all subdomains...")
-    for base_url in base_domains:
-        padded_url = f"{base_url}/chapter/{chapter_slug}-{chapter:03d}/"
-        fallback_url = f"{base_url}/chapter/{chapter_slug}-{chapter}/"
-
-        print(f"🌐 Testing: {padded_url}")
-        img_urls = try_download(padded_url)
-        if len(img_urls) > 4:
-            final_url = padded_url
-            break
-
-        print(f"🌐 Testing fallback: {fallback_url}")
-        img_urls = try_download(fallback_url)
-        if len(img_urls) > 4:
-            final_url = fallback_url
-            break
+    if working_domain:
+        # Use the previously working domain only
+        base_url = working_domain
+        for suffix in [f"{chapter_slug}-{chapter:03d}", f"{chapter_slug}-{chapter}"]:
+            test_url = f"{base_url}/chapter/{suffix}/"
+            print(f"🌐 Testing: {test_url}")
+            img_urls = try_download(test_url)
+            if len(img_urls) > 4:
+                final_url = test_url
+                break
+    else:
+        # Try all wwX subdomains to find one that works
+        print("🔍 Trying all subdomains...")
+        for base_url in base_domains:
+            for suffix in [f"{chapter_slug}-{chapter:03d}", f"{chapter_slug}-{chapter}"]:
+                test_url = f"{base_url}/chapter/{suffix}/"
+                print(f"🌐 Testing: {test_url}")
+                img_urls = try_download(test_url)
+                if len(img_urls) > 4:
+                    final_url = test_url
+                    working_domain = base_url  # 💾 Remember this domain
+                    break
+            if final_url:
+                break
 
     if not final_url:
         print("⚠️ No valid images found on any subdomain. Likely last chapter.")
