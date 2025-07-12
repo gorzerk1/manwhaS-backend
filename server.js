@@ -7,15 +7,10 @@ const app = express();
 // === Set your backend domain (IP or hostname) ===
 app.locals.domain = "https://server.manhwawut.online";
 
-// CORS setup
+// === CORS Setup ===
 app.use(cors({
-  origin: ["https://manhwawut.online", "http://localhost:3000", "https://server.manhwawut.online"],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true
+  origin: ["https://manhwawut.online", "http://localhost:3000"]
 }));
-
-// Preflight support
-app.options('*', cors());
 
 // === Serve Static Files ===
 app.use('/data/jsonFiles', express.static('/home/ubuntu/backend/data/jsonFiles'));
