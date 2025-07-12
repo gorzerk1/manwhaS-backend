@@ -68,8 +68,10 @@ def try_download(chapter_url):
         for img in img_elements:
             src = img.get_attribute("src")
             print(f"➡️ src: {src}")
-            if src and any(src.lower().endswith(ext) for ext in valid_exts):
-                img_urls.append(src)
+            if src:
+                clean_url = src.split("?")[0]  # ✅ strip tracking tokens
+                if any(clean_url.lower().endswith(ext) for ext in valid_exts):
+                    img_urls.append(src)
 
         print(f"✅ Filtered image URLs (valid types): {len(img_urls)}")
         if len(img_urls) == 0:
@@ -93,7 +95,7 @@ def get_total_dir_size_gb(path):
                 continue
     return round(total / 1024 / 1024 / 1024, 5)
 
-# Existing chapters check
+# Check already-downloaded chapters
 existing = {
     int(name.replace("chapter-", ""))
     for name in os.listdir(pictures_base)
@@ -102,7 +104,7 @@ existing = {
 max_existing = max(existing) if existing else 0
 print(f"⏭️ Skipped {len(existing)} chapters already downloaded (up to chapter {max_existing})")
 
-# Download loop
+# Start downloading
 chapter = 1
 while True:
     while chapter in existing:
