@@ -51,15 +51,22 @@ def try_download(chapter_url):
         res = session.head(chapter_url, headers=headers, timeout=5)
         if res.status_code != 200:
             return []
+
         driver.set_page_load_timeout(15)
         driver.get(chapter_url)
         sleep(2)
+
+        # NEW selector that matches all page images
         img_elements = driver.find_elements(By.CSS_SELECTOR, "img.js-page")
+
         valid_exts = [".jpg", ".jpeg", ".png", ".webp"]
         img_urls = [img.get_attribute("src") for img in img_elements if img.get_attribute("src")]
         img_urls = [url for url in img_urls if any(url.lower().endswith(ext) for ext in valid_exts)]
 
-        # 🐞 Save HTML if no images found (debugging)
+        # DEBUG output to see if images were found
+        print(f"🔎 Found {len(img_urls)} image URLs: {img_urls[:3]}{'...' if len(img_urls) > 3 else ''}")
+
+        # Save HTML for debugging if no images found
         if len(img_urls) == 0:
             with open("debug_chapter.html", "w", encoding="utf-8") as f:
                 f.write(driver.page_source)
@@ -100,7 +107,7 @@ while True:
     final_url = None
 
     if working_domain:
-        # Use the previously working domain only
+        # Use known working domain
         base_url = working_domain
         for suffix in [f"{chapter_slug}-{chapter:03d}", f"{chapter_slug}-{chapter}"]:
             test_url = f"{base_url}/chapter/{suffix}/"
@@ -110,7 +117,7 @@ while True:
                 final_url = test_url
                 break
     else:
-        # Try all wwX subdomains to find one that works
+        # Try all wwX domains until one works
         print("🔍 Trying all subdomains...")
         for base_url in base_domains:
             for suffix in [f"{chapter_slug}-{chapter:03d}", f"{chapter_slug}-{chapter}"]:
@@ -119,7 +126,7 @@ while True:
                 img_urls = try_download(test_url)
                 if len(img_urls) > 4:
                     final_url = test_url
-                    working_domain = base_url  # 💾 Remember this domain
+                    working_domain = base_url
                     break
             if final_url:
                 break
