@@ -54,7 +54,7 @@ def try_download(chapter_url):
         driver.set_page_load_timeout(15)
         driver.get(chapter_url)
         sleep(2)
-        img_elements = driver.find_elements(By.CSS_SELECTOR, "div.text-center img")
+        img_elements = driver.find_elements(By.CSS_SELECTOR, "img.js-page")
         valid_exts = [".jpg", ".jpeg", ".png", ".webp"]
         img_urls = [img.get_attribute("src") for img in img_elements if img.get_attribute("src")]
         img_urls = [url for url in img_urls if any(url.lower().endswith(ext) for ext in valid_exts)]
