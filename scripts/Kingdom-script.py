@@ -56,17 +56,17 @@ def try_download(chapter_url):
         driver.get(chapter_url)
         sleep(2)
 
-        # NEW selector that matches all page images
-        img_elements = driver.find_elements(By.CSS_SELECTOR, "img.js-page")
+        # ✅ Select only images with all 3 classes: mb-3 mx-auto js-page
+        img_elements = driver.find_elements(By.CSS_SELECTOR, 'img.mb-3.mx-auto.js-page')
 
         valid_exts = [".jpg", ".jpeg", ".png", ".webp"]
         img_urls = [img.get_attribute("src") for img in img_elements if img.get_attribute("src")]
         img_urls = [url for url in img_urls if any(url.lower().endswith(ext) for ext in valid_exts)]
 
-        # DEBUG output to see if images were found
+        # ✅ DEBUG: show how many images were found and preview
         print(f"🔎 Found {len(img_urls)} image URLs: {img_urls[:3]}{'...' if len(img_urls) > 3 else ''}")
 
-        # Save HTML for debugging if no images found
+        # 🐞 Save page for debug if nothing was found
         if len(img_urls) == 0:
             with open("debug_chapter.html", "w", encoding="utf-8") as f:
                 f.write(driver.page_source)
