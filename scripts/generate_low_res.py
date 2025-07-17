@@ -2,13 +2,26 @@ import os
 from PIL import Image, ImageFilter
 from tqdm import tqdm
 
+# === Paths ===
 source_root = "/home/ubuntu/backend/pictures"
 target_root = "/home/ubuntu/backend/picturesLow"
+log_file = "/home/ubuntu/backend/logs/generate_low_res/image.log"
 
+# === Image settings ===
 TEMP_RESIZE_WIDTH = 50
 BLUR_RADIUS = 1.5
 FINAL_QUALITY = 10
 
+# === Make sure log folder exists ===
+os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
+# === Logging function ===
+def log(message):
+    print(message)  # still show in terminal
+    with open(log_file, "a") as f:
+        f.write(message + "\n")
+
+# === Image processing ===
 def process_image(source_path, target_path):
     try:
         with Image.open(source_path) as img:
@@ -29,12 +42,12 @@ def process_image(source_path, target_path):
             img.save(target_path, quality=FINAL_QUALITY, optimize=True)
 
     except Exception as e:
-        print(f"\n❌ Error processing {source_path}: {e}")
+        log(f"❌ Error processing {source_path}: {e}")
 
+# === Walk and process ===
 def walk_and_process():
     all_images = []
 
-    # Collect all image paths
     for root, dirs, files in os.walk(source_root):
         relative_path = os.path.relpath(root, source_root)
         target_dir = os.path.join(target_root, relative_path)
@@ -45,16 +58,16 @@ def walk_and_process():
                 source_file = os.path.join(root, file)
                 target_file = os.path.join(target_dir, file)
 
-                # ✅ Skip if already exists
                 if not os.path.exists(target_file):
                     all_images.append((source_file, target_file))
 
-    print(f"🔍 Found {len(all_images)} new images to process...")
+    log(f"🔍 Found {len(all_images)} new images to process...")
 
     for source_file, target_file in tqdm(all_images, desc="Processing images", unit="img"):
         process_image(source_file, target_file)
 
+# === Entry point ===
 if __name__ == "__main__":
-    print(f"📁 Starting from: {source_root}")
+    log(f"\n📁 Starting from: {source_root}")
     walk_and_process()
-    print("✅ Done! Blurry images saved to picturesLow.")
+    log("✅ Done! Blurry images saved to picturesLow.\n")
