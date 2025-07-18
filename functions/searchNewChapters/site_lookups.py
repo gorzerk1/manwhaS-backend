@@ -69,11 +69,6 @@ def manhwaclan_latest(slug: str, _entry: dict) -> int | None:
 
 # ──────────────────────────────────────────────────────────────────────────────
 def manhuaplus_latest(slug: str, entry: dict) -> int | None:
-    """
-    1) If entry["url"] is missing, search `/all-manga/` pages until we find it.
-    2) Once URL is known, scrape the chapter list.
-    Updates entry["url"] when we fix / discover it.
-    """
     try:
         # ── Part 1 – find URL if needed ───────────────────────────────────────
         url = entry.get("url")
