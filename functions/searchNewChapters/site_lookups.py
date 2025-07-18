@@ -98,26 +98,18 @@ def manhuaplus_latest(slug: str, entry: dict) -> int | None:
             print(f"❌ manhuaplus - {slug}: Series URL not found.")
             return None
 
-        # ── Part 2 – scrape chapters ──────────────────────────────────────────
+        # ── Part 2 – find latest chapter from 'comicBtn' ─────────────────────
         res = requests.get(url, headers=HEADERS, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        links = soup.select("ul.main li.wp-manga-chapter a")
-        chapter_nums: list[int] = []
 
-        for link in links:
-            href = link.get("href", "")
-            text = link.text.strip()
+        latest_button = soup.find("a", class_="comicBtn mb-6 fs-13 r4 i-block w-m2p4 is-primary")
+        if latest_button and (href := latest_button.get("href", "")):
+            # Extract the chapter number from the href
+            if (m := re.search(r"/chapter-(\d+)", href, re.IGNORECASE)):
+                return int(m.group(1))
 
-            # Prefer numbers from href
-            if (m := re.search(r"/chapter-(\d{1,4})", href, re.IGNORECASE)):
-                chapter_nums.append(int(m.group(1)))
-                continue
-
-            # Fallback to visible text
-            if (m := re.search(r"chapter\s*(\d{1,4})", text, re.IGNORECASE)):
-                chapter_nums.append(int(m.group(1)))
-
-        return max(chapter_nums) if chapter_nums else None
+        print(f"❌ manhuaplus - {slug}: Could not find latest chapter button.")
+        return None
 
     except Exception as e:
         print(f"❌ manhuaplus - {slug}: {e}")
