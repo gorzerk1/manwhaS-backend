@@ -10,49 +10,61 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 # ──────────────────────────────────────────────────────────────────────────────
 def yaksha_latest(slug: str, _entry: dict) -> int | None:
     url = f"https://yakshascans.com/manga/{slug}"
-    res = requests.get(url, headers=HEADERS, timeout=10)
-    soup = BeautifulSoup(res.text, "html.parser")
-    links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
-    return max(
-        (
-            int(m.group(1))
-            for link in links
-            if (m := re.search(r"/chapter-(\d{1,4})", link.get("href", "")))
-        ),
-        default=None,
-    )
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
+        return max(
+            (
+                int(m.group(1))
+                for link in links
+                if (m := re.search(r"/chapter-(\d{1,4})", link.get("href", "")))
+            ),
+            default=None,
+        )
+    except Exception as e:
+        print(f"❌ yaksha - {slug}: {e}")
+        return None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 def kunmanga_latest(slug: str, _entry: dict) -> int | None:
     url = f"https://kunmanga.com/manga/{slug}/"
-    res = requests.get(url, headers=HEADERS, timeout=10)
-    soup = BeautifulSoup(res.text, "html.parser")
-    links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
-    return max(
-        (
-            int(m.group(1))
-            for link in links
-            if (m := re.search(r"chapter-(\d{1,4})", link.get("href", "")))
-        ),
-        default=None,
-    )
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        links = soup.select("li.wp-manga-chapter a[href*='/chapter-']")
+        return max(
+            (
+                int(m.group(1))
+                for link in links
+                if (m := re.search(r"chapter-(\d{1,4})", link.get("href", "")))
+            ),
+            default=None,
+        )
+    except Exception as e:
+        print(f"❌ kunmanga - {slug}: {e}")
+        return None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 def manhwaclan_latest(slug: str, _entry: dict) -> int | None:
     url = f"https://manhwaclan.com/manga/{slug}/"
-    res = requests.get(url, headers=HEADERS, timeout=10)
-    soup = BeautifulSoup(res.text, "html.parser")
-    links = soup.select("div.listing-chapters_wrap a[href*='/chapter-']")
-    return max(
-        (
-            int(m.group(1))
-            for link in links
-            if (m := re.search(r"/chapter-(\d+)", link.get("href", "")))
-        ),
-        default=None,
-    )
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        links = soup.select("div.listing-chapters_wrap a[href*='/chapter-']")
+        return max(
+            (
+                int(m.group(1))
+                for link in links
+                if (m := re.search(r"/chapter-(\d+)", link.get("href", "")))
+            ),
+            default=None,
+        )
+    except Exception as e:
+        print(f"❌ manhwaclan - {slug}: {e}")
+        return None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -62,53 +74,59 @@ def manhuaplus_latest(slug: str, entry: dict) -> int | None:
     2) Once URL is known, scrape the chapter list.
     Updates entry["url"] when we fix / discover it.
     """
-    # ── Part 1 – find URL if needed ───────────────────────────────────────────
-    url = entry.get("url")
-    if not url:
-        search_slug = slug.lower().replace(" ", "-").replace("_", "-")
-        base = "https://manhuaplus.org/all-manga/"
-        for page in range(1, 11):
-            res = requests.get(f"{base}{page}", headers=HEADERS, timeout=10)
-            soup = BeautifulSoup(res.text, "html.parser")
-            grid = soup.select_one("div.grid.gtc-f141a.gg-20.p-13.mh-77vh")
-            if not grid:
-                continue
-            for div in grid.find_all("div", recursive=False):
-                a = div.find("a", href=True)
-                if not a:
+    try:
+        # ── Part 1 – find URL if needed ───────────────────────────────────────
+        url = entry.get("url")
+        if not url:
+            search_slug = slug.lower().replace(" ", "-").replace("_", "-")
+            base = "https://manhuaplus.org/all-manga/"
+            for page in range(1, 11):
+                res = requests.get(f"{base}{page}", headers=HEADERS, timeout=10)
+                soup = BeautifulSoup(res.text, "html.parser")
+                grid = soup.select_one("div.grid.gtc-f141a.gg-20.p-13.mh-77vh")
+                if not grid:
                     continue
-                href = a["href"].lower()
-                if "/manga/" in href and search_slug in href:
-                    m = re.match(r"(https://manhuaplus\.org/manga/[^/]+)", href)
-                    if m:
-                        url = m.group(1)
-                        entry["url"] = url  # write back to caller’s dict
-                        break
-            if url:
-                break
-    if not url:
+                for div in grid.find_all("div", recursive=False):
+                    a = div.find("a", href=True)
+                    if not a:
+                        continue
+                    href = a["href"].lower()
+                    if "/manga/" in href and search_slug in href:
+                        m = re.match(r"(https://manhuaplus\.org/manga/[^/]+)", href)
+                        if m:
+                            url = m.group(1)
+                            entry["url"] = url
+                            break
+                if url:
+                    break
+        if not url:
+            print(f"❌ manhuaplus - {slug}: Series URL not found.")
+            return None
+
+        # ── Part 2 – scrape chapters ──────────────────────────────────────────
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        links = soup.select("ul.main li.wp-manga-chapter a")
+        chapter_nums: list[int] = []
+
+        for link in links:
+            href = link.get("href", "")
+            text = link.text.strip()
+
+            # Prefer numbers from href
+            if (m := re.search(r"/chapter-(\d{1,4})", href, re.IGNORECASE)):
+                chapter_nums.append(int(m.group(1)))
+                continue
+
+            # Fallback to visible text
+            if (m := re.search(r"chapter\s*(\d{1,4})", text, re.IGNORECASE)):
+                chapter_nums.append(int(m.group(1)))
+
+        return max(chapter_nums) if chapter_nums else None
+
+    except Exception as e:
+        print(f"❌ manhuaplus - {slug}: {e}")
         return None
-
-    # ── Part 2 – scrape chapters ──────────────────────────────────────────────
-    res = requests.get(url, headers=HEADERS, timeout=10)
-    soup = BeautifulSoup(res.text, "html.parser")
-    links = soup.select("ul.main li.wp-manga-chapter a")
-    chapter_nums: list[int] = []
-
-    for link in links:
-        href = link.get("href", "")
-        text = link.text.strip()
-
-        # Prefer numbers from href
-        if (m := re.search(r"/chapter-(\d{1,4})", href, re.IGNORECASE)):
-            chapter_nums.append(int(m.group(1)))
-            continue
-
-        # Fallback to visible text
-        if (m := re.search(r"chapter\s*(\d{1,4})", text, re.IGNORECASE)):
-            chapter_nums.append(int(m.group(1)))
-
-    return max(chapter_nums) if chapter_nums else None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -117,18 +135,17 @@ def readkingdom_latest(_slug: str, _entry: dict) -> int | None:
     try:
         res = requests.get(url, headers=HEADERS, timeout=10)
         res.raise_for_status()
+        soup = BeautifulSoup(res.text, "html.parser")
+        blocks = soup.select("div.bg-bg-secondary.p-3.rounded.mb-3.shadow")
+        chapters = []
+        for div in blocks:
+            a = div.select_one("a[href*='kingdom-chapter-']")
+            label = div.select_one("div.text-xs.font-semibold.text-text-muted.uppercase")
+            if not a or not label or not label.text.strip():
+                continue
+            if (m := re.search(r"kingdom-chapter-(\d{1,4})", a["href"])):
+                chapters.append(int(m.group(1)))
+        return max(chapters) if chapters else None
     except Exception as e:
-        print(f"Failed to fetch ReadKingdom page: {e}")
+        print(f"❌ readkingdom: {e}")
         return None
-
-    soup = BeautifulSoup(res.text, "html.parser")
-    blocks = soup.select("div.bg-bg-secondary.p-3.rounded.mb-3.shadow")
-    chapters = []
-    for div in blocks:
-        a = div.select_one("a[href*='kingdom-chapter-']")
-        label = div.select_one("div.text-xs.font-semibold.text-text-muted.uppercase")
-        if not a or not label or not label.text.strip():
-            continue
-        if (m := re.search(r"kingdom-chapter-(\d{1,4})", a["href"])):
-            chapters.append(int(m.group(1)))
-    return max(chapters) if chapters else None
