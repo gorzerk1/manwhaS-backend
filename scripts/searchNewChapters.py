@@ -1,4 +1,9 @@
 from pathlib import Path
+import sys
+
+
+project_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(project_root))
 
 from functions.searchNewChapters import config, checker, logger
 
