@@ -43,28 +43,40 @@ def get_local_latest_chapter(folder_path):
 
 # === ASURA URL FINDER ===
 def fetch_asura_series_url(name):
+    import requests
+    from bs4 import BeautifulSoup
+    from urllib.parse import unquote
+
     headers = {"User-Agent": "Mozilla/5.0"}
     base_url = "https://asuracomic.net"
-    slug = name.lower().replace("-", "")
+    slug = name.lower().replace("-", "").replace(" ", "")
 
     def scan_page(url):
-        res = requests.get(url, headers=headers, timeout=10)
+        try:
+            res = requests.get(url, headers=headers, timeout=10)
+            res.raise_for_status()
+        except Exception as e:
+            print(f"❌ Failed to load {url}: {e}")
+            return None
+
         soup = BeautifulSoup(res.text, "html.parser")
-        blocks = soup.select("div.w-full.p-1.pt-1.pb-3.border-b-\\[1px\\]")
-        for block in blocks:
-            a_tag = block.select_one("span.text-\\[15px\\] a[href]")
-            if a_tag:
-                href_clean = unquote(a_tag["href"]).lower().replace("-", "")
-                if slug in href_clean:
-                    return base_url + a_tag["href"]
+        # Select all <a> tags under blocks with the new structure
+        a_tags = soup.select("div.w-full.p-1.pt-1.pb-3.border-b-\\[1px\\] a[href^='/series/']")
+        
+        for a_tag in a_tags:
+            href_clean = unquote(a_tag["href"]).lower().replace("-", "").replace(" ", "")
+            if slug in href_clean:
+                return base_url + a_tag["href"]
         return None
 
     for i in range(0, 7):
         page_url = base_url if i == 0 else f"{base_url}/page/{i}"
-        url = scan_page(page_url)
-        if url:
-            return url
-    raise Exception("Series page not found on Asura")
+        found_url = scan_page(page_url)
+        if found_url:
+            return found_url
+
+    raise Exception(f"Series page not found on Asura for '{name}'")
+
 
 # === ASURA LATEST CHAPTER ===
 def extract_asura_latest_chapter(series_url):
