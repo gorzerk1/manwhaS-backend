@@ -1,111 +1,151 @@
 {
   "the-world-after-the-end": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/the-world-after-the-end",
+      "url": "https://asuracomic.net/series/the-world-after-the-end-f39371b8"
     }
   ],
   "the-demonic-cult-instructor-returns": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/the-demonic-cult-instructor-returns",
+      "url": "https://asuracomic.net/series/the-demonic-cult-instructor-returns-76437584"
     }
   ],
   "absolute-regression": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/absolute-regression",
+      "url": "https://asuracomic.net/series/absolute-regression-7fa988fb"
     },
     {
-      "site": "kunmanga"
+      "site": "kunmanga",
+      "folder_path": "/home/ubuntu/backend/pictures/absolute-regression"
     }
   ],
   "nano-machine": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/nano-machine",
+      "url": "https://asuracomic.net/series/nano-machine-958c6f83"
     },
     {
-      "site": "manhuaplus"
+      "site": "manhuaplus",
+      "folder_path": "/home/ubuntu/backend/pictures/nano-machine",
+      "url": "https://manhuaplus.org/manga/nano-machine056541"
     }
   ],
   "myst-might-mayhem": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/myst-might-mayhem",
+      "url": "https://asuracomic.net/series/myst-might-mayhem-f495e34b"
     },
     {
-      "site": "yaksha"
+      "site": "yaksha",
+      "folder_path": "/home/ubuntu/backend/pictures/myst-might-mayhem"
     },
     {
-      "site": "manhwaclan"
+      "site": "manhwaclan",
+      "folder_path": "/home/ubuntu/backend/pictures/myst-might-mayhem"
     },
     {
-      "site": "kunmanga"
+      "site": "kunmanga",
+      "folder_path": "/home/ubuntu/backend/pictures/myst-might-mayhem"
     }
   ],
   "the-return-of-the-crazy-demon": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/the-return-of-the-crazy-demon",
+      "url": "https://asuracomic.net/series/the-return-of-the-crazy-demon-dc37e43f"
     },
     {
-      "site": "yaksha"
+      "site": "yaksha",
+      "folder_path": "/home/ubuntu/backend/pictures/the-return-of-the-crazy-demon"
     },
     {
       "site": "manhwaclan",
-      "name": "return-of-the-mad-demon"
+      "name": "return-of-the-mad-demon",
+      "folder_path": "/home/ubuntu/backend/pictures/the-return-of-the-crazy-demon"
     },
     {
       "site": "kunmanga",
-      "name": "return-of-the-mad-demon"
+      "name": "return-of-the-mad-demon",
+      "folder_path": "/home/ubuntu/backend/pictures/the-return-of-the-crazy-demon"
     }
   ],
   "surviving-as-a-genius-on-borrowed-time": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/surviving-as-a-genius-on-borrowed-time",
+      "url": "https://asuracomic.net/series/surviving-as-a-genius-on-borrowed-time-98f9e7d4"
     },
     {
-      "site": "manhwaclan"
+      "site": "manhwaclan",
+      "folder_path": "/home/ubuntu/backend/pictures/surviving-as-a-genius-on-borrowed-time"
     }
   ],
   "swordmasters-youngest-son": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/swordmasters-youngest-son",
+      "url": "https://asuracomic.net/series/swordmasters-youngest-son-f900eaf6"
     }
   ],
   "the-priest-of-corruption": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/the-priest-of-corruption",
+      "url": "https://asuracomic.net/series/the-priest-of-corruption-18405dcd"
     }
   ],
   "reincarnation-of-the-suicidal-battle-god": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/reincarnation-of-the-suicidal-battle-god",
+      "url": "https://asuracomic.net/series/reincarnation-of-the-suicidal-battle-god-ec5065bb"
     }
   ],
   "sword-fanatic-wanders-through-the-night": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/sword-fanatic-wanders-through-the-night",
+      "url": "https://asuracomic.net/series/sword-fanatic-wanders-through-the-night-23012570"
     }
   ],
   "reaper-of-the-drifting-moon": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/reaper-of-the-drifting-moon",
+      "url": "https://asuracomic.net/series/reaper-of-the-drifting-moon-c35c8b14"
     }
   ],
   "legend-of-asura-the-venom-dragon": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/legend-of-asura-the-venom-dragon",
+      "url": "https://asuracomic.net/series/legend-of-asura-the-venom-dragon-be61fda7"
     }
   ],
   "demon-magic-emperor": [
     {
-      "site": "manhuaplus"
+      "site": "manhuaplus",
+      "folder_path": "/home/ubuntu/backend/pictures/demon-magic-emperor",
+      "url": "https://manhuaplus.org/manga/demon-magic-emperor"
     }
   ],
   "kingdom": [
     {
-      "site": "readkingdom"
+      "site": "readkingdom",
+      "folder_path": "/home/ubuntu/backend/pictures/kingdom"
     }
   ],
   "demonic-evolution": [
     {
-      "site": "manhwaclan"
+      "site": "manhwaclan",
+      "folder_path": "/home/ubuntu/backend/pictures/demonic-evolution"
     }
   ]
 }
