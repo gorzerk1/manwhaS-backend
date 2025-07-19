@@ -94,7 +94,8 @@
       "url": "https://asuracomic.net/series/swordmasters-youngest-son-f900eaf6"
     },
     {
-      "site":"manhwaclan"
+      "site": "manhwaclan",
+      "folder_path": "/home/ubuntu/backend/pictures/swordmasters-youngest-son"
     }
   ],
   "the-priest-of-corruption": [
