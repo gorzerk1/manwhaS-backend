@@ -57,7 +57,7 @@ def download_manhwa(
         print(f"📅  Downloading Chapter {chap} …")
         success = False
 
-        for attempt in range(1, max_retries + 1):
+        for attempt in range(1, max_retries + 5):
             driver = None
             try:
                 driver = start_browser()
