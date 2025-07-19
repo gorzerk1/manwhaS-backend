@@ -1,7 +1,7 @@
 import requests
 from time import sleep
 
-def wait_for_connection(url: str, retry_sec: int = 300) -> None:
+def wait_for_connection(url: str, retry_sec: int = 20) -> None:
     while True:
         try:
             if requests.get(url, timeout=10).status_code == 200:
@@ -9,5 +9,5 @@ def wait_for_connection(url: str, retry_sec: int = 300) -> None:
                 return
         except Exception:
             pass
-        print(f"❌  Can't connect to {url}.  Retrying in {retry_sec//60} min…")
+        print(f"❌  Can't connect to {url}.  Retrying in {retry_sec//0.2} min…")
         sleep(retry_sec)
