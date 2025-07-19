@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from time import time
 
 from functions.Manhuaplus_scrape import (

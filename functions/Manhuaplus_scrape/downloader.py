@@ -31,14 +31,7 @@ def download_manhwa(
     log_folder: str,
     max_retries: int = 5,
 ) -> List[str]:
-    """
-    Download every chapter for the provided `manhwa` dict:
 
-        {"name": "...", "url": "https://manhuaplus.org/manga/..."}.
-
-    A text log is written inside `log_folder`.
-    Returns a list of error strings (empty on perfect run).
-    """
     name      = manhwa["name"]
     base_url  = manhwa["url"]
     url_fmt   = f"{base_url}/chapter-{{}}"
