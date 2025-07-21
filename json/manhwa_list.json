@@ -154,7 +154,9 @@
   ],
   "bad-born-blood-": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/bad-born-blood-",
+      "url": "https://asuracomic.net/series/bad-born-blood-459b4ee1"
     }
   ]
 }
