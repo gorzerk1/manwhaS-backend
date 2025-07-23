@@ -52,7 +52,7 @@ def try_download(chapter_url):
 
         driver.set_page_load_timeout(15)
         driver.get(chapter_url)
-        sleep(2)
+        sleep(15)
 
         img_elements = driver.find_elements(By.CSS_SELECTOR, "img.mb-3.mx-auto.js-page")
 
