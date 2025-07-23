@@ -2,23 +2,16 @@ import os
 import requests
 from time import sleep, time
 from datetime import datetime
-import tempfile
-import shutil
-
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
-# Kill previous Chrome sessions just in case
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
 os.system("pkill -f chromium")
 os.system("pkill -f HeadlessChrome")
 os.system("pkill -f selenium")
 
-# -------- Settings --------
 manga_name = "kingdom"
 chapter_slug = "kingdom-chapter"
 base_domains = [f"https://ww{i}.readkingdom.com" for i in range(1, 8)]
@@ -31,16 +24,8 @@ timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
 log_folder = os.path.join(log_base, timestamp)
 os.makedirs(log_folder, exist_ok=True)
 
-# -------- Chrome Options --------
 chrome_options = Options()
-
-# Fix: use unique temp Chrome profile
-temp_profile_dir = tempfile.mkdtemp()
-chrome_options.add_argument(f"--user-data-dir={temp_profile_dir}")
-
-# Optional: comment this line for debug view
-# chrome_options.add_argument("--headless")
-
+chrome_options.add_argument("--headless")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--window-size=1920x1080")
 chrome_options.add_argument("--no-sandbox")
@@ -59,30 +44,17 @@ log_lines = []
 total_downloaded_bytes = 0
 working_domain = None
 
-# -------- Core: Try to find and return image links --------
 def try_download(chapter_url):
-    print(f"🌐 Trying URL: {chapter_url}")
     try:
         res = session.head(chapter_url, headers=headers, timeout=5)
-        print(f"🔍 HEAD status: {res.status_code}")
         if res.status_code != 200:
-            print("❌ Page not reachable")
             return []
 
-        driver.set_page_load_timeout(20)
+        driver.set_page_load_timeout(15)
         driver.get(chapter_url)
+        sleep(15)
 
-        # Wait for images to load
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "img.mb-3.mx-auto.js-page"))
-            )
-        except:
-            print("⚠️ Timeout waiting for images to appear")
-
-        # Grab image elements
         img_elements = driver.find_elements(By.CSS_SELECTOR, "img.mb-3.mx-auto.js-page")
-        print(f"🖼️ Found {len(img_elements)} <img> elements")
 
         valid_exts = [".jpg", ".jpeg", ".png", ".webp"]
         img_urls = []
@@ -93,14 +65,10 @@ def try_download(chapter_url):
                 if any(clean_url.lower().endswith(ext) for ext in valid_exts):
                     img_urls.append(src)
 
-        print(f"✅ Filtered valid image URLs: {len(img_urls)}")
         return img_urls
-
-    except Exception as e:
-        print(f"⚠️ Exception: {e}")
+    except:
         return []
 
-# -------- Utility: Calculate total folder size --------
 def get_total_dir_size_gb(path):
     total = 0
     for dirpath, _, filenames in os.walk(path):
@@ -111,7 +79,6 @@ def get_total_dir_size_gb(path):
                 continue
     return round(total / 1024 / 1024 / 1024, 5)
 
-# -------- Check already downloaded --------
 existing = {
     int(name.replace("chapter-", ""))
     for name in os.listdir(pictures_base)
@@ -130,13 +97,12 @@ while True:
     img_urls = []
     final_url = None
 
-    # Try known domains
     if working_domain:
         base_url = working_domain
         for suffix in [f"{chapter_slug}-{chapter:03d}", f"{chapter_slug}-{chapter}"]:
             test_url = f"{base_url}/chapter/{suffix}/"
             img_urls = try_download(test_url)
-            if len(img_urls) > 0:
+            if len(img_urls) > 4:
                 final_url = test_url
                 break
     else:
@@ -144,7 +110,7 @@ while True:
             for suffix in [f"{chapter_slug}-{chapter:03d}", f"{chapter_slug}-{chapter}"]:
                 test_url = f"{base_url}/chapter/{suffix}/"
                 img_urls = try_download(test_url)
-                if len(img_urls) > 0:
+                if len(img_urls) > 4:
                     final_url = test_url
                     working_domain = base_url
                     break
@@ -152,10 +118,10 @@ while True:
                 break
 
     if not final_url:
-        print(f"🚫 No valid images found for chapter {chapter}. Likely last chapter.")
+        print("🚫 No valid images found. Likely last chapter.")
         break
 
-    print(f"✅ Found {len(img_urls)} images from: {final_url}")
+    print(f"✅ Found {len(img_urls)} images. Downloading...")
     os.makedirs(chapter_dir, exist_ok=True)
 
     for i, img_url in enumerate(img_urls):
@@ -167,9 +133,9 @@ while True:
             total_downloaded_bytes += len(res.content)
             with open(path, "wb") as f:
                 f.write(res.content)
-            print(f"✅ Saved: {name}")
-        except Exception as e:
-            print(f"❌ Failed: {img_url} | Error: {e}")
+            print(f"✅ {name}")
+        except:
+            print(f"❌ Failed {img_url}")
 
     downloaded_gb = round(total_downloaded_bytes / 1024 / 1024 / 1024, 5)
     current_total_gb = get_total_dir_size_gb(pictures_base)
@@ -180,13 +146,11 @@ while True:
     existing.add(chapter)
     chapter += 1
 
-# -------- Log and cleanup --------
 log_path = os.path.join(log_folder, f"{manga_name}.txt")
 with open(log_path, "w", encoding="utf-8") as f:
     f.write("\n".join(log_lines))
 
 driver.quit()
-shutil.rmtree(temp_profile_dir, ignore_errors=True)
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
 os.system("pkill -f chromium")
