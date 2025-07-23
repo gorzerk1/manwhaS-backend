@@ -3,7 +3,6 @@
 
 import os
 import requests
-import logging
 from time import sleep, time
 from datetime import datetime
 from selenium import webdriver
@@ -11,21 +10,13 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 
-# ── basic logging ───────────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
+# ── kill any stale chrome processes ────────────────────────────────────────────
 for proc in ["chrome", "chromedriver", "chromium", "HeadlessChrome", "selenium"]:
     os.system(f"pkill -f {proc}")
-    logging.debug("Attempted to kill any running process: %s", proc)
 
-# ── user‑config bits ────────────────────────────────────────────────────────────
+# ── user‑config ────────────────────────────────────────────────────────────────
 manga_name   = "kingdom"
 chapter_slug = "kingdom-chapter"
-
-# only mirrors that resolve today
 base_domains = [
     "https://ww1.readkingdom.com",
     "https://ww2.readkingdom.com",
@@ -42,7 +33,7 @@ timestamp  = datetime.now().strftime("%Y-%m-%d_%H-%M")
 log_folder = os.path.join(log_root, timestamp)
 os.makedirs(log_folder, exist_ok=True)
 
-# ── headless Chrome options ─────────────────────────────────────────────────────
+# ── headless Chrome options ────────────────────────────────────────────────────
 chrome_opts = Options()
 chrome_opts.add_argument("--headless=new")
 chrome_opts.add_argument("--disable-gpu")
@@ -52,7 +43,6 @@ chrome_opts.add_argument("--disable-dev-shm-usage")
 chrome_opts.add_argument("--user-agent=Mozilla/5.0")
 
 def start_browser():
-    logging.debug("Starting headless Chrome browser")
     return webdriver.Chrome(options=chrome_opts)
 
 driver  = start_browser()
@@ -64,7 +54,7 @@ total_bytes = 0
 log_lines   = []
 working_dom = None
 
-# ── helper: total dir size in GiB ───────────────────────────────────────────────
+# ── helper: dir size in GiB ────────────────────────────────────────────────────
 def dir_size_gib(path: str) -> float:
     total = 0
     for dpath, _, files in os.walk(path):
@@ -75,30 +65,27 @@ def dir_size_gib(path: str) -> float:
                 continue
     return round(total / 1024 / 1024 / 1024, 5)
 
-# ── helper: download&scrape one chapter url ─────────────────────────────────────
+# ── helper: scrape one chapter url ─────────────────────────────────────────────
 def try_download(ch_url: str) -> list[str]:
-    logging.debug("Trying download from URL: %s", ch_url)
     try:
-        # follow 301/302 automatically now
-        res = session.head(ch_url, headers=headers,
-                           allow_redirects=True, timeout=5)
-        logging.debug("HEAD status %s for %s", res.status_code, ch_url)
+        res = session.head(
+            ch_url,
+            headers=headers,
+            allow_redirects=True,   # follow 301/302
+            timeout=5
+        )
         if res.status_code != 200:
             return []
 
-        # give the page longer to load
         driver.set_page_load_timeout(60)
         try:
             driver.get(ch_url)
         except TimeoutException:
-            # stop loading; whatever finished is enough to parse the DOM
-            logging.warning("Page‑load timeout, stopping load: %s", ch_url)
-            driver.execute_script("window.stop()")
+            driver.execute_script("window.stop()")  # keep partial HTML
 
-        sleep(2)  # short pause – DOM has settled
+        sleep(2)  # let DOM settle
 
         imgs = driver.find_elements(By.CSS_SELECTOR, "img.mb-3.mx-auto.js-page")
-        logging.debug("Found %d <img> tags", len(imgs))
 
         valid = [".jpg", ".jpeg", ".png", ".webp"]
         urls  = []
@@ -107,14 +94,12 @@ def try_download(ch_url: str) -> list[str]:
             clean = src.split("?", 1)[0].lower()
             if any(clean.endswith(ext) for ext in valid):
                 urls.append(src)
-                logging.debug("Valid image URL: %s", src)
 
         return urls
-    except Exception as e:
-        logging.exception("Exception in try_download for %s: %s", ch_url, e)
+    except Exception:
         return []
 
-# ── find already‑downloaded chapters ────────────────────────────────────────────
+# ── find already‑downloaded chapters ───────────────────────────────────────────
 os.makedirs(pic_root, exist_ok=True)
 existing = {
     int(name.replace("chapter-", ""))
@@ -124,23 +109,19 @@ existing = {
 }
 max_existing = max(existing) if existing else 0
 print(f"⏭️  Skipped {len(existing)} chapters (up to {max_existing})")
-logging.debug("Existing chapters: %s", existing)
 
-# ── main loop ───────────────────────────────────────────────────────────────────
+# ── main loop ──────────────────────────────────────────────────────────────────
 chapter = 1
 while True:
-    # skip any chapter we already have
     while chapter in existing:
         chapter += 1
 
     chapter_dir = os.path.join(pic_root, f"chapter-{chapter}")
     print(f"\n📚 Chapter {chapter}")
-    logging.debug("Processing Chapter %d", chapter)
 
     img_urls, final_url = [], None
-
-    # first try the last good domain, else iterate the list
     dom_list = [working_dom] if working_dom else base_domains
+
     for base in dom_list:
         if base is None:
             continue
@@ -157,7 +138,6 @@ while True:
 
     if not final_url:
         print("🚫 No valid images found. Likely last chapter.")
-        logging.debug("No valid images; terminating loop.")
         break
 
     print(f"✅ Found {len(img_urls)} images. Downloading…")
@@ -168,15 +148,13 @@ while True:
         name = f"{idx:03d}.{ext}"
         path = os.path.join(chapter_dir, name)
         try:
-            logging.debug("Downloading %s → %s", img_url, path)
             res = session.get(img_url, headers=headers, timeout=30)
             total_bytes += len(res.content)
             with open(path, "wb") as fh:
                 fh.write(res.content)
             print(f"  ✅ {name}")
-        except Exception as e:
+        except Exception:
             print(f"  ❌ {img_url}")
-            logging.exception("Failed to download %s: %s", img_url, e)
 
     run_gib  = round(total_bytes / 1024 / 1024 / 1024, 5)
     total_gb = dir_size_gib(pic_root)
@@ -187,16 +165,15 @@ while True:
     existing.add(chapter)
     chapter += 1
 
-# ── write session log ───────────────────────────────────────────────────────────
+# ── write session log ──────────────────────────────────────────────────────────
+os.makedirs(log_root, exist_ok=True)
 log_path = os.path.join(log_folder, f"{manga_name}.txt")
 with open(log_path, "w", encoding="utf-8") as fh:
     fh.write("\n".join(log_lines))
-logging.debug("Log written to %s", log_path)
 
-# ── tidy up ─────────────────────────────────────────────────────────────────────
+# ── tidy up ────────────────────────────────────────────────────────────────────
 driver.quit()
 for proc in ["chrome", "chromedriver", "chromium", "HeadlessChrome", "selenium"]:
     os.system(f"pkill -f {proc}")
-    logging.debug("Cleaned up process: %s", proc)
 
 print(f"\n✅ Finished in {time() - start_time:.2f} s")
