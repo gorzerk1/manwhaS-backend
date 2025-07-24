@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -12,6 +13,8 @@ app.use(cors({
   origin: ["https://manhwawut.online", "http://localhost:3000"]
 }));
 
+app.use(express.json());
+
 // === Serve Static Files ===
 app.use('/data/jsonFiles', express.static('/home/ubuntu/backend/data/jsonFiles'));
 app.use('/backend/manwhaTitle', express.static('/home/ubuntu/backend/manwhaTitle'));
@@ -24,6 +27,8 @@ app.use(require('./routes/filteredManwhas'));
 app.use(require('./routes/latestUpdates'));
 app.use(require('./routes/chapterData'));
 app.use(require('./routes/description'));
+app.use('/users', require('./routes/users'));
+
 
 // === Start Server ===
 const PORT = 4000;
