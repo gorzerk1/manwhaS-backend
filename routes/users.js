@@ -6,7 +6,7 @@ const auth = require('../middleware/auth');
 require('dotenv').config();
 
 const SECRET_KEY = process.env.JWT_SECRET;
-const { registerUser, getUserByUsername } = require('../db'); // ✅ UPDATED DB FUNCTIONS
+const { registerUser, getUserByUsername } = require('../db'); 
 
 // === Register ===
 router.post('/register', async (req, res) => {
@@ -18,7 +18,7 @@ router.post('/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    registerUser(username, hashedPassword); // ✅ store in SQLite
+    registerUser(username, hashedPassword);
     res.json({ message: 'User registered successfully' });
   });
 });

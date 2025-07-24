@@ -2,9 +2,9 @@ const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('./users.db');
 
 // Register user (insert)
-function registerUser(email, password) {
-  const query = `INSERT INTO users (email, password) VALUES (?, ?)`;
-  db.run(query, [email, password], function (err) {
+function registerUser(username, password) {
+  const query = `INSERT INTO users (username, password) VALUES (?, ?)`;
+  db.run(query, [username, password], function (err) {
     if (err) {
       console.error("❌ Register failed:", err.message);
     } else {
@@ -13,10 +13,10 @@ function registerUser(email, password) {
   });
 }
 
-// Get user by email (for login)
-function getUserByEmail(email, callback) {
-  const query = `SELECT * FROM users WHERE email = ?`;
-  db.get(query, [email], (err, row) => {
+// Get user by username (for login)
+function getUserByUsername(username, callback) {
+  const query = `SELECT * FROM users WHERE username = ?`;
+  db.get(query, [username], (err, row) => {
     if (err) {
       console.error("❌ Query failed:", err.message);
       callback(null);
@@ -26,4 +26,4 @@ function getUserByEmail(email, callback) {
   });
 }
 
-module.exports = { registerUser, getUserByEmail };
+module.exports = { registerUser, getUserByUsername };
