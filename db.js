@@ -21,7 +21,7 @@ function getUserByEmail(email, callback) {
       console.error("❌ Query failed:", err.message);
       callback(null);
     } else {
-      callback(row); // row will be null if not found
+      callback(row);
     }
   });
 }

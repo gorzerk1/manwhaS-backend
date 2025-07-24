@@ -28,6 +28,8 @@ app.use(require('./routes/latestUpdates'));
 app.use(require('./routes/chapterData'));
 app.use(require('./routes/description'));
 app.use('/users', require('./routes/users'));
+app.use('/visited', require('./routes/visited'));
+
 
 
 // === Start Server ===
