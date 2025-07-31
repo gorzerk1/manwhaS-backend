@@ -126,12 +126,7 @@
       "url": "https://asuracomic.net/series/reaper-of-the-drifting-moon-c35c8b14"
     },
     {
-      "site": "manhwaclan",
-      "folder_path": "/home/ubuntu/backend/pictures/reaper-of-the-drifting-moon"
-    },
-    {
-      "site": "kunmanga",
-      "folder_path": "/home/ubuntu/backend/pictures/reaper-of-the-drifting-moon"
+      "site":"kunmanga"
     }
   ],
   "legend-of-asura-the-venom-dragon": [
