@@ -20,7 +20,8 @@
       "url": "https://asuracomic.net/series/absolute-regression-7fa988fb"
     },
     {
-      "site":"manhwaclan"
+      "site": "manhwaclan",
+      "folder_path": "/home/ubuntu/backend/pictures/absolute-regression"
     }
   ],
   "nano-machine": [
