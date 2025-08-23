@@ -33,7 +33,6 @@ log_base      = os.path.join(base_dir, "logs")
 log_dir       = os.path.join(log_base, SCRIPT_NAME)
 os.makedirs(log_dir, exist_ok=True)
 
-# keep profiles under HOME, not /tmp (snap/chromium confinement can reject /tmp)
 profiles_root = os.path.join(log_dir, "chrome-profiles")
 os.makedirs(profiles_root, exist_ok=True)
 
@@ -122,25 +121,37 @@ def _gentle_autoscroll(driver, steps=24, pause=0.2):
             break
         last_h = h
 
+# --------- CHANGED: only collect images inside .w-full.mx-auto.center ----------
 def _collect_image_urls(driver):
+    container_sel = ".w-full.mx-auto.center"
+    # wait for at least one image inside the target container
     try:
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "img.object-cover.mx-auto"))
+        WebDriverWait(driver, 12).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, f"{container_sel} img"))
         )
     except Exception:
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "img, picture source"))
+        # fallback: wait for the container itself
+        WebDriverWait(driver, 12).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, container_sel))
         )
+
     _gentle_autoscroll(driver, steps=24, pause=0.2)
-    candidates = driver.find_elements(By.CSS_SELECTOR, "img.object-cover.mx-auto, picture source, picture img, img")
+
+    # Only look inside the container
+    candidates = driver.find_elements(
+        By.CSS_SELECTOR,
+        f"{container_sel} img, {container_sel} picture source, {container_sel} picture img"
+    )
+
     urls = []
     def add(u):
         if not u:
             return
         lu = u.lower()
-        if (".webp" in lu) or (".jpg" in lu) or (".jpeg" in lu) or (".png" in lu) or (".gif" in lu):
+        if any(ext in lu for ext in [".webp", ".jpg", ".jpeg", ".png", ".gif"]):
             if u not in urls:
                 urls.append(u)
+
     for el in candidates:
         tag = el.tag_name.lower()
         if tag == "img":
@@ -155,7 +166,9 @@ def _collect_image_urls(driver):
             if srcset:
                 last_item = srcset.split(",")[-1].strip().split()[0]
                 add(last_item)
+
     return urls
+# ------------------------------------------------------------------------------
 
 start_time = time()
 wait_for_connection()
@@ -198,7 +211,7 @@ for manhwa in manhwa_list:
                 driver.get(chap_url)
                 image_urls = _collect_image_urls(driver)
                 if not image_urls:
-                    raise Exception("No images found (after scroll & src/srcset checks)")
+                    raise Exception("No images found inside .w-full.mx-auto.center")
 
                 os.makedirs(temp_folder, exist_ok=True)
                 for i, src in enumerate(image_urls, start=1):
