@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from time import sleep, time
 from datetime import datetime
 import shutil
@@ -17,22 +19,22 @@ os.system("pkill -f chromium")
 os.system("pkill -f HeadlessChrome")
 os.system("pkill -f selenium")
 
-SCRIPT_NAME = "ManwhaScriptAsura"
-LOG_FILENAME = "new_chapters.log"
+SCRIPT_NAME   = "ManwhaScriptAsura"
+LOG_FILENAME  = "new_chapters.log"
 
-json_path = os.path.expanduser("~/server-backend/json/manhwa_list.json")
-base_dir = os.path.expanduser("~/backend")
+json_path     = os.path.expanduser("~/server-backend/json/manhwa_list.json")
+base_dir      = os.path.expanduser("~/backend")
 pictures_base = os.path.join(base_dir, "pictures")
-log_base = os.path.join(base_dir, "logs")
+log_base      = os.path.join(base_dir, "logs")
 
-log_dir = os.path.join(log_base, SCRIPT_NAME)
+log_dir       = os.path.join(log_base, SCRIPT_NAME)
 os.makedirs(log_dir, exist_ok=True)
 
 profiles_root = os.path.join(log_dir, "chrome-profiles")
 os.makedirs(profiles_root, exist_ok=True)
 
-log_path = os.path.join(log_dir, LOG_FILENAME)
-check_url = "https://asuracomic.net"
+log_path      = os.path.join(log_dir, LOG_FILENAME)
+check_url     = "https://asuracomic.net"
 
 log_handle = open(log_path, "a", encoding="utf-8", buffering=1)
 
@@ -86,7 +88,6 @@ def wait_for_connection():
         sleep(300)
 
 CHAP_RE = re.compile(r"/chapter/(\d+)(?:[/?#]|$)")
-ALT_RE = re.compile(r"\bchapter\s*\d+[\s:._-]*page\s*\d+\b", re.I)
 
 def get_latest_chapter(base_url: str) -> int:
     try:
@@ -122,30 +123,23 @@ def _chapter_unavailable(driver):
     except Exception:
         return False
 
-def _get_img_src(img):
-    s = (img.get_attribute("src") or "").strip()
-    if not s:
-        s = (img.get_attribute("data-src") or "").strip()
-    if not s:
-        s = (img.get_attribute("data-lazy-src") or "").strip()
-    if not s:
-        s = (img.get_attribute("data-original") or "").strip()
-    return s
-
 def _find_target_images(driver):
-    imgs = driver.find_elements(By.CSS_SELECTOR, "img[alt]")
+    imgs = driver.find_elements(By.CSS_SELECTOR, "img.object-cover.mx-auto[src]")
+    if not imgs:
+        containers = driver.find_elements(By.CSS_SELECTOR, ".object-cover.mx-auto")
+        for el in containers:
+            try:
+                imgs.extend(el.find_elements(By.CSS_SELECTOR, "img[src]"))
+            except Exception:
+                pass
     seen = set()
     dedup = []
     for img in imgs:
         try:
-            alt = (img.get_attribute("alt") or "").strip()
-            src = _get_img_src(img)
-            if not src:
-                continue
-            if ALT_RE.search(alt):
-                if src not in seen:
-                    seen.add(src)
-                    dedup.append(img)
+            sid = img.get_attribute("src") or ""
+            if sid and sid not in seen:
+                seen.add(sid)
+                dedup.append(img)
         except Exception:
             pass
     return dedup
@@ -164,11 +158,9 @@ def _collect_image_urls(driver):
                 seen.add(u)
                 urls.append(u)
     for img in img_elements:
-        add(_get_img_src(img))
+        add(img.get_attribute("src"))
     if not urls:
-        alts = [((e.get_attribute("alt") or "").strip()) for e in driver.find_elements(By.CSS_SELECTOR, "img[alt]")]
-        log(f"ℹ️ No matching images by alt. Seen {len(alts)} img[alt]. Sample: {alts[:8]}")
-        raise Exception('No images found with alt matching "chapter <num> page <num>"')
+        raise Exception("No images found for selector .object-cover.mx-auto")
     return urls
 
 def _expected_image_count(driver):
@@ -183,11 +175,11 @@ def _download_images_to_folder(image_urls, dest_folder):
         if ext not in ("webp", "jpg", "jpeg", "png", "gif"):
             ext = "jpg"
         file_name = f"{i:03d}.{ext}"
-        img_resp = requests.get(src, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+        img_resp = requests.get(src, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
         img_resp.raise_for_status()
         with open(os.path.join(dest_folder, file_name), "wb") as f:
             f.write(img_resp.content)
-        sleep(0.1)
+        sleep(0.15)
 
 def _count_downloaded_images(folder):
     if not os.path.isdir(folder):
@@ -253,23 +245,28 @@ start_time = time()
 wait_for_connection()
 
 for manhwa in manhwa_list:
-    name = manhwa["name"]
-    base_url = manhwa["url"]
+    name      = manhwa["name"]
+    base_url  = manhwa["url"]
     url_format = f"{base_url}/chapter/{{}}"
+
     folder_path = os.path.join(pictures_base, name)
     os.makedirs(folder_path, exist_ok=True)
+
     print(f"\n📚 Processing manhwa: {name}")
     last_chapter = get_latest_chapter(base_url)
+
     driver = None
     try:
         driver = start_browser()
         driver.set_page_load_timeout(60)
         driver.set_script_timeout(30)
+
         for chap in range(1, last_chapter + 1):
-            chap_folder = os.path.join(folder_path, f"chapter-{chap}")
-            temp_folder = os.path.join(folder_path, f"chapter-{chap}_temp")
-            chap_url = url_format.format(chap)
+            chap_folder  = os.path.join(folder_path, f"chapter-{chap}")
+            temp_folder  = os.path.join(folder_path, f"chapter-{chap}_temp")
+            chap_url     = url_format.format(chap)
             needs_replacement = False
+
             if os.path.exists(chap_folder):
                 src_file = os.path.join(chap_folder, "source.txt")
                 if os.path.exists(src_file):
@@ -280,6 +277,7 @@ for manhwa in manhwa_list:
                             needs_replacement = True
                 else:
                     continue
+
             try:
                 ok, expected, got = _download_with_verification(driver, chap_url, temp_folder, max_attempts=5)
                 with open(os.path.join(temp_folder, "source.txt"), "w") as f:
@@ -297,6 +295,7 @@ for manhwa in manhwa_list:
             except Exception as e:
                 shutil.rmtree(temp_folder, ignore_errors=True)
                 log(f"❌ {name} chapter {chap} – {e}")
+
     finally:
         if driver:
             try:
