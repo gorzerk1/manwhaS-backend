@@ -146,6 +146,85 @@ def _collect_image_urls(driver):
         raise Exception("No images found inside target container")
     return urls
 
+def _expected_image_count(driver):
+    container_xpath = (
+        "//div[contains(@class,'py-8') and contains(@class,'-mx-5') and "
+        "contains(@class,'md:mx-0') and contains(@class,'flex') and "
+        "contains(@class,'flex-col') and contains(@class,'items-center') and "
+        "contains(@class,'justify-center')]"
+    )
+    WebDriverWait(driver, 15).until(
+        EC.presence_of_all_elements_located((By.XPATH, f"{container_xpath}//img"))
+    )
+    _gentle_autoscroll(driver, steps=30, pause=0.2)
+    return len(driver.find_elements(By.XPATH, f"{container_xpath}//img"))
+
+def _download_images_to_folder(image_urls, dest_folder):
+    os.makedirs(dest_folder, exist_ok=True)
+    for i, src in enumerate(image_urls, start=1):
+        base = src.split("?")[0].split("#")[0]
+        ext = base.split(".")[-1].lower() if "." in base else "jpg"
+        if ext not in ("webp", "jpg", "jpeg", "png", "gif"):
+            ext = "jpg"
+        file_name = f"{i:03d}.{ext}"
+        img_resp = requests.get(src, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+        img_resp.raise_for_status()
+        with open(os.path.join(dest_folder, file_name), "wb") as f:
+            f.write(img_resp.content)
+        sleep(0.15)
+
+def _count_downloaded_images(folder):
+    if not os.path.isdir(folder):
+        return 0
+    n = 0
+    for fn in os.listdir(folder):
+        if fn.lower().endswith((".webp", ".jpg", ".jpeg", ".png", ".gif")):
+            n += 1
+    return n
+
+class SingleImageDetected(Exception):
+    pass
+
+def _download_with_verification(driver, chap_url, temp_folder, max_attempts=5):
+    attempt = 1
+    while attempt <= max_attempts:
+        try:
+            driver.get(chap_url)
+        except Exception:
+            sleep(2)
+            driver.get(chap_url)
+        try:
+            shutil.rmtree(temp_folder, ignore_errors=True)
+            expected = _expected_image_count(driver)
+            if expected <= 1:
+                raise SingleImageDetected(f"Only {expected} image(s) on page")
+            urls = _collect_image_urls(driver)
+            os.makedirs(temp_folder, exist_ok=True)
+            _download_images_to_folder(urls, temp_folder)
+            got = _count_downloaded_images(temp_folder)
+            if got <= 1:
+                raise SingleImageDetected(f"Only {got} image(s) downloaded")
+            if got == expected and expected > 0:
+                return True, expected, got
+            attempt += 1
+            shutil.rmtree(temp_folder, ignore_errors=True)
+            sleep(1.0 + attempt * 0.5)
+            driver.refresh()
+            _gentle_autoscroll(driver, steps=35, pause=0.2)
+        except SingleImageDetected:
+            shutil.rmtree(temp_folder, ignore_errors=True)
+            raise
+        except Exception:
+            attempt += 1
+            shutil.rmtree(temp_folder, ignore_errors=True)
+            sleep(1.0 + attempt * 0.5)
+            try:
+                driver.refresh()
+            except Exception:
+                pass
+            _gentle_autoscroll(driver, steps=35, pause=0.2)
+    return False, 0, 0
+
 start_time = time()
 wait_for_connection()
 
@@ -184,38 +263,16 @@ for manhwa in manhwa_list:
                     continue
 
             try:
-                driver.get(chap_url)
-                image_urls = _collect_image_urls(driver)
-                if not image_urls:
-                    raise Exception("No images found")
-
-                os.makedirs(temp_folder, exist_ok=True)
-                for i, src in enumerate(image_urls, start=1):
-                    base = src.split("?")[0].split("#")[0]
-                    ext = base.split(".")[-1].lower() if "." in base else "jpg"
-                    if ext not in ("webp", "jpg", "jpeg", "png", "gif"):
-                        ext = "jpg"
-                    file_name = f"{i:03d}.{ext}"
-
-                    img_resp = requests.get(
-                        src,
-                        headers={"User-Agent": "Mozilla/5.0"},
-                        timeout=20
-                    )
-                    img_resp.raise_for_status()
-                    with open(os.path.join(temp_folder, file_name), "wb") as f:
-                        f.write(img_resp.content)
-                    sleep(0.15)
-
+                ok, expected, got = _download_with_verification(driver, chap_url, temp_folder, max_attempts=5)
                 with open(os.path.join(temp_folder, "source.txt"), "w") as f:
                     f.write("Downloaded from AsuraScans")
-
                 if needs_replacement:
                     shutil.rmtree(chap_folder, ignore_errors=True)
-
                 os.rename(temp_folder, chap_folder)
-                log(f"✅ Downloaded {name} chapter {chap}")
-
+                log(f"✅ Downloaded {name} chapter {chap} ({got}/{expected} images)")
+            except SingleImageDetected as si:
+                shutil.rmtree(temp_folder, ignore_errors=True)
+                log(f"ℹ️ {name} chapter {chap} – single image detected; treating as no new chapter")
             except Exception as e:
                 shutil.rmtree(temp_folder, ignore_errors=True)
                 log(f"❌ {name} chapter {chap} – {e}")
