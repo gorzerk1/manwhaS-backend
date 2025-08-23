@@ -121,7 +121,7 @@ def _gentle_autoscroll(driver, steps=24, pause=0.2):
             break
         last_h = h
 
-# --------- UPDATED: collect <img src> inside ALL div.w-full.mx-auto.center ----------
+# --------- collect <img src> inside ALL div.w-full.mx-auto.center ----------
 def _collect_image_urls(driver):
     container_sel = "div.w-full.mx-auto.center"
 
@@ -205,8 +205,15 @@ for manhwa in manhwa_list:
             try:
                 driver.get(chap_url)
                 image_urls = _collect_image_urls(driver)
+
+                # ===== FIX: skip the first image (cover/banner/ads) =====
+                if image_urls:
+                    image_urls = image_urls[1:]
+                    log(f"ℹ️  Skipped first image for {name} chapter {chap}")
+
                 if not image_urls:
-                    raise Exception("No images found inside div.w-full.mx-auto.center")
+                    raise Exception("No images found after skipping the first image")
+                # ========================================================
 
                 os.makedirs(temp_folder, exist_ok=True)
                 for i, src in enumerate(image_urls, start=1):
