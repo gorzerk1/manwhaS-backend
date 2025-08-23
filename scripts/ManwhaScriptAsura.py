@@ -88,6 +88,7 @@ def wait_for_connection():
         sleep(300)
 
 CHAP_RE = re.compile(r"/chapter/(\d+)(?:[/?#]|$)")
+ALT_RE = re.compile(r"\bchapter\s+\d+\s+page\s+\d+\s+\d+\b", re.I)
 
 def get_latest_chapter(base_url: str) -> int:
     try:
@@ -124,22 +125,19 @@ def _chapter_unavailable(driver):
         return False
 
 def _find_target_images(driver):
-    imgs = driver.find_elements(By.CSS_SELECTOR, "img.object-cover.mx-auto[src]")
-    if not imgs:
-        containers = driver.find_elements(By.CSS_SELECTOR, ".object-cover.mx-auto")
-        for el in containers:
-            try:
-                imgs.extend(el.find_elements(By.CSS_SELECTOR, "img[src]"))
-            except Exception:
-                pass
+    imgs = driver.find_elements(By.CSS_SELECTOR, "img[alt][src]")
     seen = set()
     dedup = []
     for img in imgs:
         try:
-            sid = img.get_attribute("src") or ""
-            if sid and sid not in seen:
-                seen.add(sid)
-                dedup.append(img)
+            alt = (img.get_attribute("alt") or "").strip()
+            src = (img.get_attribute("src") or "").strip()
+            if not src:
+                continue
+            if ALT_RE.search(alt):
+                if src not in seen:
+                    seen.add(src)
+                    dedup.append(img)
         except Exception:
             pass
     return dedup
@@ -160,7 +158,7 @@ def _collect_image_urls(driver):
     for img in img_elements:
         add(img.get_attribute("src"))
     if not urls:
-        raise Exception("No images found for selector .object-cover.mx-auto")
+        raise Exception('No images found with alt matching "chapter <num> page <num> <num>"')
     return urls
 
 def _expected_image_count(driver):
