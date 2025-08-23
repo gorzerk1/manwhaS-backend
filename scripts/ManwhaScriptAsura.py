@@ -102,7 +102,7 @@ def get_latest_chapter(base_url: str) -> int:
         print(f"❌ get_latest_chapter error: {e}")
         return 1
 
-def _gentle_autoscroll(driver, steps=20, pause=0.25):
+def _gentle_autoscroll(driver, steps=24, pause=0.2):
     last_h = -1
     for _ in range(steps):
         driver.execute_script("window.scrollBy(0, Math.ceil(window.innerHeight*0.9));")
@@ -163,75 +163,75 @@ for manhwa in manhwa_list:
     print(f"\n📚 Processing manhwa: {name}")
     last_chapter = get_latest_chapter(base_url)
 
-    for chap in range(1, last_chapter + 1):
-        chap_folder  = os.path.join(folder_path, f"chapter-{chap}")
-        temp_folder  = os.path.join(folder_path, f"chapter-{chap}_temp")
-        chap_url     = url_format.format(chap)
-        needs_replacement = False
+    driver = None
+    try:
+        driver = start_browser()
+        driver.set_page_load_timeout(60)
+        driver.set_script_timeout(30)
 
-        if os.path.exists(chap_folder):
-            src_file = os.path.join(chap_folder, "source.txt")
-            if os.path.exists(src_file):
-                with open(src_file) as f:
-                    if f.read().strip() == "Downloaded from AsuraScans":
-                        continue
-                    else:
-                        needs_replacement = True
-            else:
-                continue
+        for chap in range(1, last_chapter + 1):
+            chap_folder  = os.path.join(folder_path, f"chapter-{chap}")
+            temp_folder  = os.path.join(folder_path, f"chapter-{chap}_temp")
+            chap_url     = url_format.format(chap)
+            needs_replacement = False
 
-        driver = None
-        try:
-            driver = start_browser()
-            driver.set_page_load_timeout(60)
-            driver.set_script_timeout(30)
+            if os.path.exists(chap_folder):
+                src_file = os.path.join(chap_folder, "source.txt")
+                if os.path.exists(src_file):
+                    with open(src_file) as f:
+                        if f.read().strip() == "Downloaded from AsuraScans":
+                            continue
+                        else:
+                            needs_replacement = True
+                else:
+                    continue
 
-            driver.get(chap_url)
-            image_urls = _collect_image_urls(driver)
+            try:
+                driver.get(chap_url)
+                image_urls = _collect_image_urls(driver)
+                if not image_urls:
+                    raise Exception("No images found (after scroll & src/srcset checks)")
 
-            if not image_urls:
-                raise Exception("No images found (after scroll & src/srcset checks)")
+                os.makedirs(temp_folder, exist_ok=True)
+                for i, src in enumerate(image_urls, start=1):
+                    ext = src.split("?")[0].split("#")[0].split(".")[-1].lower()
+                    if ext not in ("webp", "jpg", "jpeg", "png", "gif"):
+                        ext = "jpg"
+                    file_name = f"{i:03d}.{ext}"
+                    img_data = requests.get(
+                        src,
+                        headers={"User-Agent": "Mozilla/5.0"},
+                        timeout=15
+                    ).content
+                    with open(os.path.join(temp_folder, file_name), "wb") as f:
+                        f.write(img_data)
+                    sleep(0.2)
 
-            os.makedirs(temp_folder, exist_ok=True)
-            for i, src in enumerate(image_urls, start=1):
-                ext = src.split("?")[0].split("#")[0].split(".")[-1].lower()
-                if ext not in ("webp", "jpg", "jpeg", "png", "gif"):
-                    ext = "jpg"
-                file_name = f"{i:03d}.{ext}"
-                img_data = requests.get(
-                    src,
-                    headers={"User-Agent": "Mozilla/5.0"},
-                    timeout=15
-                ).content
-                with open(os.path.join(temp_folder, file_name), "wb") as f:
-                    f.write(img_data)
-                sleep(0.2)
+                with open(os.path.join(temp_folder, "source.txt"), "w") as f:
+                    f.write("Downloaded from AsuraScans")
 
-            with open(os.path.join(temp_folder, "source.txt"), "w") as f:
-                f.write("Downloaded from AsuraScans")
+                if needs_replacement:
+                    shutil.rmtree(chap_folder, ignore_errors=True)
 
-            if needs_replacement:
-                shutil.rmtree(chap_folder, ignore_errors=True)
+                os.rename(temp_folder, chap_folder)
+                log(f"✅ Downloaded {name} chapter {chap}")
 
-            os.rename(temp_folder, chap_folder)
+            except Exception as e:
+                shutil.rmtree(temp_folder, ignore_errors=True)
+                log(f"❌ {name} chapter {chap} – {e}")
 
-            log(f"✅ Downloaded {name} chapter {chap}")
-
-        except Exception as e:
-            shutil.rmtree(temp_folder, ignore_errors=True)
-            log(f"❌ {name} chapter {chap} – {e}")
-
-        finally:
-            if driver:
-                try:
-                    driver.quit()
-                except Exception:
-                    pass
-                try:
-                    if hasattr(driver, "_profile_dir"):
-                        shutil.rmtree(driver._profile_dir, ignore_errors=True)
-                except Exception:
-                    pass
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+            try:
+                if hasattr(driver, "_profile_dir"):
+                    sleep(0.5)
+                    shutil.rmtree(driver._profile_dir, ignore_errors=True)
+            except Exception:
+                pass
 
 log_handle.close()
 print(f"\n⏱️ Finished in {time() - start_time:.2f} sec")
