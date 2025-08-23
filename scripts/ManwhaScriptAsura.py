@@ -59,7 +59,7 @@ def start_browser():
     profile_dir = os.path.join(profiles_root, f"profile-{uuid.uuid4().hex}")
     os.makedirs(profile_dir, exist_ok=False)
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920x1080")
     chrome_options.add_argument("--no-sandbox")
@@ -111,25 +111,42 @@ def _gentle_autoscroll(driver, steps=24, pause=0.2):
     for _ in range(steps):
         driver.execute_script("window.scrollBy(0, Math.ceil(window.innerHeight*0.9));")
         sleep(pause)
-        h = driver.execute_script(
-            "return Math.max(document.body.scrollTop, document.documentElement.scrollTop);"
-        )
+        h = driver.execute_script("return Math.max(document.body.scrollTop, document.documentElement.scrollTop);")
         if h == last_h:
             break
         last_h = h
 
+def _chapter_unavailable(driver):
+    try:
+        elems = driver.find_elements(By.CSS_SELECTOR, ".fixed.inset-0.flex.items-center.justify-center.z-50.rounded-md")
+        return len(elems) > 0
+    except Exception:
+        return False
+
+def _find_target_images(driver):
+    imgs = driver.find_elements(By.CSS_SELECTOR, "img.object-cover.mx-auto[src]")
+    if not imgs:
+        containers = driver.find_elements(By.CSS_SELECTOR, ".object-cover.mx-auto")
+        for el in containers:
+            try:
+                imgs.extend(el.find_elements(By.CSS_SELECTOR, "img[src]"))
+            except Exception:
+                pass
+    seen = set()
+    dedup = []
+    for img in imgs:
+        try:
+            sid = img.get_attribute("src") or ""
+            if sid and sid not in seen:
+                seen.add(sid)
+                dedup.append(img)
+        except Exception:
+            pass
+    return dedup
+
 def _collect_image_urls(driver):
-    container_xpath = (
-        "//div[contains(@class,'py-8') and contains(@class,'-mx-5') and "
-        "contains(@class,'md:mx-0') and contains(@class,'flex') and "
-        "contains(@class,'flex-col') and contains(@class,'items-center') and "
-        "contains(@class,'justify-center')]"
-    )
-    WebDriverWait(driver, 15).until(
-        EC.presence_of_element_located((By.XPATH, f"{container_xpath}//img[@src]"))
-    )
     _gentle_autoscroll(driver, steps=30, pause=0.2)
-    img_elements = driver.find_elements(By.XPATH, f"{container_xpath}//img[@src]")
+    img_elements = _find_target_images(driver)
     urls, seen = [], set()
     def add(u: str | None):
         if not u:
@@ -143,21 +160,12 @@ def _collect_image_urls(driver):
     for img in img_elements:
         add(img.get_attribute("src"))
     if not urls:
-        raise Exception("No images found inside target container")
+        raise Exception("No images found for selector .object-cover.mx-auto")
     return urls
 
 def _expected_image_count(driver):
-    container_xpath = (
-        "//div[contains(@class,'py-8') and contains(@class,'-mx-5') and "
-        "contains(@class,'md:mx-0') and contains(@class,'flex') and "
-        "contains(@class,'flex-col') and contains(@class,'items-center') and "
-        "contains(@class,'justify-center')]"
-    )
-    WebDriverWait(driver, 15).until(
-        EC.presence_of_all_elements_located((By.XPATH, f"{container_xpath}//img"))
-    )
     _gentle_autoscroll(driver, steps=30, pause=0.2)
-    return len(driver.find_elements(By.XPATH, f"{container_xpath}//img"))
+    return len(_find_target_images(driver))
 
 def _download_images_to_folder(image_urls, dest_folder):
     os.makedirs(dest_folder, exist_ok=True)
@@ -185,6 +193,9 @@ def _count_downloaded_images(folder):
 class SingleImageDetected(Exception):
     pass
 
+class ChapterUnavailable(Exception):
+    pass
+
 def _download_with_verification(driver, chap_url, temp_folder, max_attempts=5):
     attempt = 1
     while attempt <= max_attempts:
@@ -194,6 +205,8 @@ def _download_with_verification(driver, chap_url, temp_folder, max_attempts=5):
             sleep(2)
             driver.get(chap_url)
         try:
+            if _chapter_unavailable(driver):
+                raise ChapterUnavailable("Chapter unavailable overlay detected")
             shutil.rmtree(temp_folder, ignore_errors=True)
             expected = _expected_image_count(driver)
             if expected <= 1:
@@ -211,6 +224,9 @@ def _download_with_verification(driver, chap_url, temp_folder, max_attempts=5):
             sleep(1.0 + attempt * 0.5)
             driver.refresh()
             _gentle_autoscroll(driver, steps=35, pause=0.2)
+        except ChapterUnavailable:
+            shutil.rmtree(temp_folder, ignore_errors=True)
+            raise
         except SingleImageDetected:
             shutil.rmtree(temp_folder, ignore_errors=True)
             raise
@@ -270,6 +286,9 @@ for manhwa in manhwa_list:
                     shutil.rmtree(chap_folder, ignore_errors=True)
                 os.rename(temp_folder, chap_folder)
                 log(f"✅ Downloaded {name} chapter {chap} ({got}/{expected} images)")
+            except ChapterUnavailable:
+                shutil.rmtree(temp_folder, ignore_errors=True)
+                log(f"⏭️ {name} chapter {chap} – chapter unavailable, skipped")
             except SingleImageDetected as si:
                 shutil.rmtree(temp_folder, ignore_errors=True)
                 log(f"ℹ️ {name} chapter {chap} – single image detected; treating as no new chapter")
