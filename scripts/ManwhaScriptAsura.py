@@ -14,6 +14,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from time import sleep, time
 from datetime import datetime
 import shutil
+import tempfile
 
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
@@ -55,16 +56,21 @@ for name, sources in full_data.items():
             else:
                 print(f"⚠️  Missing or invalid URL for: {name}")
 
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--window-size=1920x1080")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--user-agent=Mozilla/5.0")
-
 def start_browser():
-    return webdriver.Chrome(options=chrome_options)
+    profile_dir = tempfile.mkdtemp(prefix="selenium-prof-")
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--user-agent=Mozilla/5.0")
+    chrome_options.add_argument(f"--user-data-dir={profile_dir}")
+    chrome_options.add_argument("--no-first-run")
+    chrome_options.add_argument("--no-default-browser-check")
+    driver = webdriver.Chrome(options=chrome_options)
+    driver._profile_dir = profile_dir
+    return driver
 
 def wait_for_connection():
     while True:
@@ -219,6 +225,11 @@ for manhwa in manhwa_list:
             if driver:
                 try:
                     driver.quit()
+                except Exception:
+                    pass
+                try:
+                    if hasattr(driver, "_profile_dir"):
+                        shutil.rmtree(driver._profile_dir, ignore_errors=True)
                 except Exception:
                     pass
 
