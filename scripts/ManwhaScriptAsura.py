@@ -1,5 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
+import re
 import json
+import uuid
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -11,14 +16,12 @@ from time import sleep, time
 from datetime import datetime
 import shutil
 
-# ---------- Kill zombie Chrome -------------------------------------------
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
 os.system("pkill -f chromium")
 os.system("pkill -f HeadlessChrome")
 os.system("pkill -f selenium")
 
-# ---------- CONFIG --------------------------------------------------------
 SCRIPT_NAME   = "ManwhaScriptAsura"
 LOG_FILENAME  = "new_chapters.log"
 
@@ -27,24 +30,22 @@ base_dir      = os.path.expanduser("~/backend")
 pictures_base = os.path.join(base_dir, "pictures")
 log_base      = os.path.join(base_dir, "logs")
 
-# Folder for this script
 log_dir       = os.path.join(log_base, SCRIPT_NAME)
 os.makedirs(log_dir, exist_ok=True)
 
-log_path      = os.path.join(log_dir, LOG_FILENAME)
+# keep profiles under HOME, not /tmp (snap/chromium confinement can reject /tmp)
+profiles_root = os.path.join(log_dir, "chrome-profiles")
+os.makedirs(profiles_root, exist_ok=True)
 
+log_path      = os.path.join(log_dir, LOG_FILENAME)
 check_url     = "https://asuracomic.net"
 
-# ---------- Single line‑buffered log file ---------------------------------
-# buffering=1  --> line buffered → every .write() flushes immediately
 log_handle = open(log_path, "a", encoding="utf-8", buffering=1)
 
 def log(msg: str) -> None:
-    """Print to console *and* append the message to the single log file."""
     print(msg)
     log_handle.write(f"{msg}\n")
 
-# ---------- Load manhwa list ---------------------------------------------
 with open(json_path, "r") as f:
     full_data = json.load(f)
 
@@ -58,24 +59,31 @@ for name, sources in full_data.items():
             else:
                 print(f"⚠️  Missing or invalid URL for: {name}")
 
-# ---------- Selenium options ---------------------------------------------
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--window-size=1920x1080")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--user-agent=Mozilla/5.0")
-
 def start_browser():
-    return webdriver.Chrome(options=chrome_options)
+    profile_dir = os.path.join(profiles_root, f"profile-{uuid.uuid4().hex}")
+    os.makedirs(profile_dir, exist_ok=False)
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--user-agent=Mozilla/5.0")
+    chrome_options.add_argument(f"--user-data-dir={profile_dir}")
+    chrome_options.add_argument("--profile-directory=Default")
+    chrome_options.add_argument("--no-first-run")
+    chrome_options.add_argument("--no-default-browser-check")
+    chrome_options.add_argument("--password-store=basic")
+    chrome_options.add_argument("--use-mock-keychain")
+    chrome_options.add_argument("--remote-debugging-port=0")
+    driver = webdriver.Chrome(options=chrome_options)
+    driver._profile_dir = profile_dir
+    return driver
 
-# ---------- Helpers -------------------------------------------------------
 def wait_for_connection():
-    """Block until the target site is reachable."""
     while True:
         try:
-            res = requests.get(check_url, timeout=10)
+            res = requests.get(check_url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
             if res.status_code == 200:
                 print("✅ Website is reachable.")
                 return
@@ -83,29 +91,72 @@ def wait_for_connection():
             print("❌ Can't connect. Retrying in 5 min...")
         sleep(300)
 
+CHAP_RE = re.compile(r"/chapter/(\d+)(?:[/?#]|$)")
+
 def get_latest_chapter(base_url: str) -> int:
-    """Return the highest chapter number found on the series page."""
     try:
-        res = requests.get(base_url,
-                           headers={"User-Agent": "Mozilla/5.0"},
-                           timeout=10)
+        res = requests.get(base_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        links = soup.select("a[href*='/chapter/']")
         nums = []
-        for link in links:
-            href = link.get("href", "")
-            try:
-                nums.append(int(href.split("/chapter/")[1].split("/")[0]))
-            except (ValueError, IndexError):
-                continue
+        for a in soup.find_all("a", href=True):
+            m = CHAP_RE.search(a["href"])
+            if m:
+                try:
+                    nums.append(int(m.group(1)))
+                except ValueError:
+                    pass
         return max(nums) if nums else 1
     except Exception as e:
         print(f"❌ get_latest_chapter error: {e}")
         return 1
 
-# =======================================================================
-# MAIN
-# =======================================================================
+def _gentle_autoscroll(driver, steps=24, pause=0.2):
+    last_h = -1
+    for _ in range(steps):
+        driver.execute_script("window.scrollBy(0, Math.ceil(window.innerHeight*0.9));")
+        sleep(pause)
+        h = driver.execute_script(
+            "return Math.max(document.body.scrollTop, document.documentElement.scrollTop);"
+        )
+        if h == last_h:
+            break
+        last_h = h
+
+def _collect_image_urls(driver):
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "img.object-cover.mx-auto"))
+        )
+    except Exception:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "img, picture source"))
+        )
+    _gentle_autoscroll(driver, steps=24, pause=0.2)
+    candidates = driver.find_elements(By.CSS_SELECTOR, "img.object-cover.mx-auto, picture source, picture img, img")
+    urls = []
+    def add(u):
+        if not u:
+            return
+        lu = u.lower()
+        if (".webp" in lu) or (".jpg" in lu) or (".jpeg" in lu) or (".png" in lu) or (".gif" in lu):
+            if u not in urls:
+                urls.append(u)
+    for el in candidates:
+        tag = el.tag_name.lower()
+        if tag == "img":
+            for attr in ("currentSrc", "src", "data-src", "data-lazy-src"):
+                add(el.get_attribute(attr))
+            srcset = el.get_attribute("srcset")
+            if srcset:
+                last_item = srcset.split(",")[-1].strip().split()[0]
+                add(last_item)
+        elif tag == "source":
+            srcset = el.get_attribute("srcset")
+            if srcset:
+                last_item = srcset.split(",")[-1].strip().split()[0]
+                add(last_item)
+    return urls
+
 start_time = time()
 wait_for_connection()
 
@@ -120,84 +171,75 @@ for manhwa in manhwa_list:
     print(f"\n📚 Processing manhwa: {name}")
     last_chapter = get_latest_chapter(base_url)
 
-    # -------------------------------------------------------------------
-    for chap in range(1, last_chapter + 1):
-        chap_folder  = os.path.join(folder_path, f"chapter-{chap}")
-        temp_folder  = os.path.join(folder_path, f"chapter-{chap}_temp")
-        chap_url     = url_format.format(chap)
-        needs_replacement = False
+    driver = None
+    try:
+        driver = start_browser()
+        driver.set_page_load_timeout(60)
+        driver.set_script_timeout(30)
 
-        # --------- Skip chapters that are already downloaded ------------
-        if os.path.exists(chap_folder):
-            src_file = os.path.join(chap_folder, "source.txt")
-            if os.path.exists(src_file):
-                with open(src_file) as f:
-                    if f.read().strip() == "Downloaded from AsuraScans":
-                        # Already downloaded by our script; nothing to log
-                        continue
-                    else:
-                        needs_replacement = True
-            else:
-                # Old folder without source.txt; treat as "unknown", skip
-                continue
+        for chap in range(1, last_chapter + 1):
+            chap_folder  = os.path.join(folder_path, f"chapter-{chap}")
+            temp_folder  = os.path.join(folder_path, f"chapter-{chap}_temp")
+            chap_url     = url_format.format(chap)
+            needs_replacement = False
 
-        # --------- Download (only if we need it) ------------------------
-        driver = None
-        try:
-            driver = start_browser()
-            driver.set_page_load_timeout(60)
-            driver.set_script_timeout(30)
+            if os.path.exists(chap_folder):
+                src_file = os.path.join(chap_folder, "source.txt")
+                if os.path.exists(src_file):
+                    with open(src_file) as f:
+                        if f.read().strip() == "Downloaded from AsuraScans":
+                            continue
+                        else:
+                            needs_replacement = True
+                else:
+                    continue
 
-            driver.get(chap_url)
-            WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "img.object-cover.mx-auto"))
-            )
-            images = driver.find_elements(
-                By.CSS_SELECTOR, "img.object-cover.mx-auto")
+            try:
+                driver.get(chap_url)
+                image_urls = _collect_image_urls(driver)
+                if not image_urls:
+                    raise Exception("No images found (after scroll & src/srcset checks)")
 
-            if not images:
-                raise Exception("No images found")
+                os.makedirs(temp_folder, exist_ok=True)
+                for i, src in enumerate(image_urls, start=1):
+                    ext = src.split("?")[0].split("#")[0].split(".")[-1].lower()
+                    if ext not in ("webp", "jpg", "jpeg", "png", "gif"):
+                        ext = "jpg"
+                    file_name = f"{i:03d}.{ext}"
+                    img_data = requests.get(
+                        src,
+                        headers={"User-Agent": "Mozilla/5.0"},
+                        timeout=15
+                    ).content
+                    with open(os.path.join(temp_folder, file_name), "wb") as f:
+                        f.write(img_data)
+                    sleep(0.2)
 
-            os.makedirs(temp_folder, exist_ok=True)
-            for i, img in enumerate(images):
-                src = WebDriverWait(driver, 10).until(
-                    lambda d: img.get_attribute("src"))
-                ext = src.split(".")[-1].split("?")[0]
-                file_name = f"{i+1:03d}.{ext}"
-                img_data = requests.get(
-                    src,
-                    headers={"User-Agent": "Mozilla/5.0"},
-                    timeout=10
-                ).content
-                with open(os.path.join(temp_folder, file_name), "wb") as f:
-                    f.write(img_data)
-                sleep(0.3)  # polite pause
+                with open(os.path.join(temp_folder, "source.txt"), "w") as f:
+                    f.write("Downloaded from AsuraScans")
 
-            # Mark folder as ours
-            with open(os.path.join(temp_folder, "source.txt"), "w") as f:
-                f.write("Downloaded from AsuraScans")
+                if needs_replacement:
+                    shutil.rmtree(chap_folder, ignore_errors=True)
 
-            # Replace old folder if needed
-            if needs_replacement:
-                shutil.rmtree(chap_folder, ignore_errors=True)
+                os.rename(temp_folder, chap_folder)
+                log(f"✅ Downloaded {name} chapter {chap}")
 
-            os.rename(temp_folder, chap_folder)
+            except Exception as e:
+                shutil.rmtree(temp_folder, ignore_errors=True)
+                log(f"❌ {name} chapter {chap} – {e}")
 
-            # -------- SUCCESS → write one concise log line --------------
-            log(f"✅ Downloaded {name} chapter {chap}")
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+            try:
+                if hasattr(driver, "_profile_dir"):
+                    sleep(0.5)
+                    shutil.rmtree(driver._profile_dir, ignore_errors=True)
+            except Exception:
+                pass
 
-        except Exception as e:
-            shutil.rmtree(temp_folder, ignore_errors=True)
-            log(f"❌ {name} chapter {chap} – {e}")
-
-        finally:
-            if driver:
-                try:
-                    driver.quit()
-                except Exception:
-                    pass
-
-# ---------- Clean up ------------------------------------------------------
 log_handle.close()
 print(f"\n⏱️ Finished in {time() - start_time:.2f} sec")
