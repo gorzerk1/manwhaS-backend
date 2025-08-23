@@ -6,6 +6,7 @@ import re
 import json
 import shutil
 import tempfile
+import uuid
 from time import sleep, time
 from datetime import datetime
 from urllib.parse import urljoin
@@ -39,6 +40,10 @@ log_base      = os.path.join(base_dir, "logs")
 log_dir       = os.path.join(log_base, SCRIPT_NAME)
 os.makedirs(log_dir, exist_ok=True)
 
+# keep Chrome profiles under HOME (snap/chromium can be finicky with /tmp)
+profiles_root = os.path.join(log_dir, "chrome-profiles")
+os.makedirs(profiles_root, exist_ok=True)
+
 log_path      = os.path.join(log_dir, LOG_FILENAME)
 
 check_url     = "https://asuracomic.net"
@@ -70,27 +75,74 @@ for name, sources in full_data.items():
                 log(f"⚠️  Missing or invalid URL for: {name}")
 
 # ---------- Selenium options / launcher ----------------------------------
-def start_browser():
-    """Start Chrome with a unique temporary user-data-dir to avoid profile lock conflicts."""
-    profile_dir = tempfile.mkdtemp(prefix="chrome-profile-")
+def _base_chrome_options():
     opts = Options()
-    opts.add_argument("--headless=new")
+    # We'll try headless=new first; if it fails, fall back to classic --headless
     opts.add_argument("--disable-gpu")
     opts.add_argument("--window-size=1920x1080")
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--user-agent=Mozilla/5.0")
     opts.add_argument("--disable-blink-features=AutomationControlled")
-    opts.add_argument(f"--user-data-dir={profile_dir}")
     opts.add_argument("--no-first-run")
     opts.add_argument("--no-default-browser-check")
     opts.add_argument("--disable-extensions")
-    opts.add_argument("--remote-debugging-port=0")  # avoid port collisions
-    # keep images enabled (default), some sites fail if disabled
+    # Avoid shared ports
+    opts.add_argument("--remote-debugging-port=0")
+    # Misc stability
+    opts.add_argument("--disable-features=Translate,AutomationControlled")
+    opts.add_argument("--hide-scrollbars")
+    opts.add_argument("--mute-audio")
+    # Keychain noise
+    opts.add_argument("--password-store=basic")
+    opts.add_argument("--use-mock-keychain")
+    return opts
 
-    driver = webdriver.Chrome(options=opts)
-    driver._temp_profile_dir = profile_dir  # remember for cleanup
-    return driver
+def start_browser():
+    """
+    Start Chrome with a unique user-data-dir under HOME.
+    Try headless=new first, then fall back to classic --headless if needed.
+    """
+    # unique profile path under HOME (snap/chromium is picky about /tmp)
+    profile_dir = os.path.join(profiles_root, f"profile-{uuid.uuid4().hex}")
+    os.makedirs(profile_dir, exist_ok=False)
+
+    # attempt 1: headless=new
+    opts = _base_chrome_options()
+    opts.add_argument("--headless=new")
+    opts.add_argument(f"--user-data-dir={profile_dir}")
+    opts.add_argument(f"--disk-cache-dir={os.path.join(profile_dir, 'cache')}")
+    try:
+        driver = webdriver.Chrome(options=opts)
+        driver._temp_profile_dir = profile_dir
+        return driver
+    except Exception as e1:
+        # cleanup and retry with classic headless
+        try:
+            # if chrome started partially, we'll remove after final attempt
+            pass
+        finally:
+            pass
+
+        opts2 = _base_chrome_options()
+        opts2.add_argument("--headless")  # classic
+        # new unique profile (in case the first attempt left a lock)
+        profile_dir2 = os.path.join(profiles_root, f"profile-{uuid.uuid4().hex}")
+        os.makedirs(profile_dir2, exist_ok=False)
+        opts2.add_argument(f"--user-data-dir={profile_dir2}")
+        opts2.add_argument(f"--disk-cache-dir={os.path.join(profile_dir2, 'cache')}")
+
+        try:
+            driver = webdriver.Chrome(options=opts2)
+            driver._temp_profile_dir = profile_dir2
+            # best-effort cleanup of first profile dir (unused)
+            shutil.rmtree(profile_dir, ignore_errors=True)
+            return driver
+        except Exception as e2:
+            # total failure: clean both and re-raise
+            shutil.rmtree(profile_dir, ignore_errors=True)
+            shutil.rmtree(profile_dir2, ignore_errors=True)
+            raise e2
 
 # ---------- Helpers -------------------------------------------------------
 def wait_for_connection():
