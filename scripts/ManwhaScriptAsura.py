@@ -4,6 +4,7 @@
 import os
 import re
 import json
+import uuid
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -14,7 +15,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from time import sleep, time
 from datetime import datetime
 import shutil
-import tempfile
 
 os.system("pkill -f chrome")
 os.system("pkill -f chromedriver")
@@ -33,8 +33,11 @@ log_base      = os.path.join(base_dir, "logs")
 log_dir       = os.path.join(log_base, SCRIPT_NAME)
 os.makedirs(log_dir, exist_ok=True)
 
-log_path      = os.path.join(log_dir, LOG_FILENAME)
+# keep profiles under HOME, not /tmp (snap/chromium confinement can reject /tmp)
+profiles_root = os.path.join(log_dir, "chrome-profiles")
+os.makedirs(profiles_root, exist_ok=True)
 
+log_path      = os.path.join(log_dir, LOG_FILENAME)
 check_url     = "https://asuracomic.net"
 
 log_handle = open(log_path, "a", encoding="utf-8", buffering=1)
@@ -57,7 +60,8 @@ for name, sources in full_data.items():
                 print(f"⚠️  Missing or invalid URL for: {name}")
 
 def start_browser():
-    profile_dir = tempfile.mkdtemp(prefix="selenium-prof-")
+    profile_dir = os.path.join(profiles_root, f"profile-{uuid.uuid4().hex}")
+    os.makedirs(profile_dir, exist_ok=False)
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
@@ -66,8 +70,12 @@ def start_browser():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--user-agent=Mozilla/5.0")
     chrome_options.add_argument(f"--user-data-dir={profile_dir}")
+    chrome_options.add_argument("--profile-directory=Default")
     chrome_options.add_argument("--no-first-run")
     chrome_options.add_argument("--no-default-browser-check")
+    chrome_options.add_argument("--password-store=basic")
+    chrome_options.add_argument("--use-mock-keychain")
+    chrome_options.add_argument("--remote-debugging-port=0")
     driver = webdriver.Chrome(options=chrome_options)
     driver._profile_dir = profile_dir
     return driver
