@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 import re
 import json
@@ -121,49 +118,33 @@ def _gentle_autoscroll(driver, steps=24, pause=0.2):
             break
         last_h = h
 
-# --------- collect <img src> inside ALL div.w-full.mx-auto.center ----------
 def _collect_image_urls(driver):
-    container_sel = "div.w-full.mx-auto.center"
-
-    # Wait until at least one matching <img> is present anywhere on the page
-    try:
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, f"{container_sel} img"))
-        )
-    except Exception:
-        # Fallback: wait for at least one container
-        WebDriverWait(driver, 12).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, container_sel))
-        )
-
-    # Trigger lazy-loading
+    container_xpath = (
+        "//div[contains(@class,'py-8') and contains(@class,'-mx-5') and "
+        "contains(@class,'md:mx-0') and contains(@class,'flex') and "
+        "contains(@class,'flex-col') and contains(@class,'items-center') and "
+        "contains(@class,'justify-center')]"
+    )
+    WebDriverWait(driver, 15).until(
+        EC.presence_of_element_located((By.XPATH, f"{container_xpath}//img[@src]"))
+    )
     _gentle_autoscroll(driver, steps=30, pause=0.2)
-
-    # Grab ALL <img> elements inside ALL matching containers
-    img_elements = driver.find_elements(By.CSS_SELECTOR, f"{container_sel} img")
-
-    urls = []
-    seen = set()
-
-    def add(u):
+    img_elements = driver.find_elements(By.XPATH, f"{container_xpath}//img[@src]")
+    urls, seen = [], set()
+    def add(u: str | None):
         if not u:
             return
-        # strip query/hash for extension check & file naming
         base = u.split("?")[0].split("#")[0]
         ext = base.split(".")[-1].lower() if "." in base else ""
-        # accept common raster formats only
         if ext in ("webp", "jpg", "jpeg", "png", "gif"):
             if u not in seen:
                 seen.add(u)
                 urls.append(u)
-
     for img in img_elements:
-        # Prefer the actual rendered source, then the literal src attribute
-        add(img.get_attribute("currentSrc"))
         add(img.get_attribute("src"))
-
+    if not urls:
+        raise Exception("No images found inside target container")
     return urls
-# ------------------------------------------------------------------------------
 
 start_time = time()
 wait_for_connection()
@@ -205,19 +186,11 @@ for manhwa in manhwa_list:
             try:
                 driver.get(chap_url)
                 image_urls = _collect_image_urls(driver)
-
-                # ===== FIX: skip the first image (cover/banner/ads) =====
-                if image_urls:
-                    image_urls = image_urls[1:]
-                    log(f"ℹ️  Skipped first image for {name} chapter {chap}")
-
                 if not image_urls:
-                    raise Exception("No images found after skipping the first image")
-                # ========================================================
+                    raise Exception("No images found")
 
                 os.makedirs(temp_folder, exist_ok=True)
                 for i, src in enumerate(image_urls, start=1):
-                    # compute extension safely for saving
                     base = src.split("?")[0].split("#")[0]
                     ext = base.split(".")[-1].lower() if "." in base else "jpg"
                     if ext not in ("webp", "jpg", "jpeg", "png", "gif"):
