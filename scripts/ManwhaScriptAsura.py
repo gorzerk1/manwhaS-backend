@@ -121,51 +121,46 @@ def _gentle_autoscroll(driver, steps=24, pause=0.2):
             break
         last_h = h
 
-# --------- CHANGED: only collect images inside .w-full.mx-auto.center ----------
+# --------- UPDATED: collect <img src> inside ALL div.w-full.mx-auto.center ----------
 def _collect_image_urls(driver):
-    container_sel = ".w-full.mx-auto.center"
-    # wait for at least one image inside the target container
+    container_sel = "div.w-full.mx-auto.center"
+
+    # Wait until at least one matching <img> is present anywhere on the page
     try:
-        WebDriverWait(driver, 12).until(
+        WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, f"{container_sel} img"))
         )
     except Exception:
-        # fallback: wait for the container itself
+        # Fallback: wait for at least one container
         WebDriverWait(driver, 12).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, container_sel))
         )
 
-    _gentle_autoscroll(driver, steps=24, pause=0.2)
+    # Trigger lazy-loading
+    _gentle_autoscroll(driver, steps=30, pause=0.2)
 
-    # Only look inside the container
-    candidates = driver.find_elements(
-        By.CSS_SELECTOR,
-        f"{container_sel} img, {container_sel} picture source, {container_sel} picture img"
-    )
+    # Grab ALL <img> elements inside ALL matching containers
+    img_elements = driver.find_elements(By.CSS_SELECTOR, f"{container_sel} img")
 
     urls = []
+    seen = set()
+
     def add(u):
         if not u:
             return
-        lu = u.lower()
-        if any(ext in lu for ext in [".webp", ".jpg", ".jpeg", ".png", ".gif"]):
-            if u not in urls:
+        # strip query/hash for extension check & file naming
+        base = u.split("?")[0].split("#")[0]
+        ext = base.split(".")[-1].lower() if "." in base else ""
+        # accept common raster formats only
+        if ext in ("webp", "jpg", "jpeg", "png", "gif"):
+            if u not in seen:
+                seen.add(u)
                 urls.append(u)
 
-    for el in candidates:
-        tag = el.tag_name.lower()
-        if tag == "img":
-            for attr in ("currentSrc", "src", "data-src", "data-lazy-src"):
-                add(el.get_attribute(attr))
-            srcset = el.get_attribute("srcset")
-            if srcset:
-                last_item = srcset.split(",")[-1].strip().split()[0]
-                add(last_item)
-        elif tag == "source":
-            srcset = el.get_attribute("srcset")
-            if srcset:
-                last_item = srcset.split(",")[-1].strip().split()[0]
-                add(last_item)
+    for img in img_elements:
+        # Prefer the actual rendered source, then the literal src attribute
+        add(img.get_attribute("currentSrc"))
+        add(img.get_attribute("src"))
 
     return urls
 # ------------------------------------------------------------------------------
@@ -211,22 +206,26 @@ for manhwa in manhwa_list:
                 driver.get(chap_url)
                 image_urls = _collect_image_urls(driver)
                 if not image_urls:
-                    raise Exception("No images found inside .w-full.mx-auto.center")
+                    raise Exception("No images found inside div.w-full.mx-auto.center")
 
                 os.makedirs(temp_folder, exist_ok=True)
                 for i, src in enumerate(image_urls, start=1):
-                    ext = src.split("?")[0].split("#")[0].split(".")[-1].lower()
+                    # compute extension safely for saving
+                    base = src.split("?")[0].split("#")[0]
+                    ext = base.split(".")[-1].lower() if "." in base else "jpg"
                     if ext not in ("webp", "jpg", "jpeg", "png", "gif"):
                         ext = "jpg"
                     file_name = f"{i:03d}.{ext}"
-                    img_data = requests.get(
+
+                    img_resp = requests.get(
                         src,
                         headers={"User-Agent": "Mozilla/5.0"},
-                        timeout=15
-                    ).content
+                        timeout=20
+                    )
+                    img_resp.raise_for_status()
                     with open(os.path.join(temp_folder, file_name), "wb") as f:
-                        f.write(img_data)
-                    sleep(0.2)
+                        f.write(img_resp.content)
+                    sleep(0.15)
 
                 with open(os.path.join(temp_folder, "source.txt"), "w") as f:
                     f.write("Downloaded from AsuraScans")
