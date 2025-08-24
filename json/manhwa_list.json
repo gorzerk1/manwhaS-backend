@@ -171,26 +171,34 @@
       "folder_path": "/home/ubuntu/backend/pictures/bad-born-blood-"
     }
   ],
-    "reincarnation-of-the-fist-king": [
+  "reincarnation-of-the-fist-king": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/reincarnation-of-the-fist-king",
+      "url": "https://asuracomic.net/series/reincarnation-of-the-fist-king-069811fd"
     },
     {
-      "site": "kunmanga"
+      "site": "kunmanga",
+      "folder_path": "/home/ubuntu/backend/pictures/reincarnation-of-the-fist-king"
     },
     {
-      "site": "manhwaclan"
+      "site": "manhwaclan",
+      "folder_path": "/home/ubuntu/backend/pictures/reincarnation-of-the-fist-king"
     }
   ],
-    "eternally-regressing-knight": [
+  "eternally-regressing-knight": [
     {
-      "site": "asura"
+      "site": "asura",
+      "folder_path": "/home/ubuntu/backend/pictures/eternally-regressing-knight",
+      "url": "https://asuracomic.net/series/eternally-regressing-knight-6062a099"
     },
     {
-      "site": "kunmanga"
+      "site": "kunmanga",
+      "folder_path": "/home/ubuntu/backend/pictures/eternally-regressing-knight"
     },
     {
-      "site": "manhwaclan"
+      "site": "manhwaclan",
+      "folder_path": "/home/ubuntu/backend/pictures/eternally-regressing-knight"
     }
   ]
 }
