@@ -43,15 +43,15 @@
       "url": "https://asuracomic.net/series/myst-might-mayhem-f495e34b"
     },
     {
-      "site": "yaksha",
-      "folder_path": "/home/ubuntu/backend/pictures/myst-might-mayhem"
-    },
-    {
       "site": "manhwaclan",
       "folder_path": "/home/ubuntu/backend/pictures/myst-might-mayhem"
     },
     {
       "site": "kunmanga",
+      "folder_path": "/home/ubuntu/backend/pictures/myst-might-mayhem"
+    },
+    {
+      "site": "yaksha",
       "folder_path": "/home/ubuntu/backend/pictures/myst-might-mayhem"
     }
   ],
